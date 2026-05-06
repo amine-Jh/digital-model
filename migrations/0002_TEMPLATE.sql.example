@@ -1,0 +1,19 @@
+-- =============================================================================
+-- Template for incremental migrations
+-- =============================================================================
+-- 1. Copy this file to:  0002_meaningful_name.sql  (next free number).
+-- 2. Replace the placeholder below with real DDL/DML.
+-- 3. Prefer idempotent patterns for team sanity.
+-- 4. Run after 0001_baseline.sql (and any prior NNNN_*.sql) on each environment.
+-- =============================================================================
+
+-- Example: add a nullable column
+-- alter table public.some_table
+--   add column if not exists new_field text;
+
+-- Example: new RLS policy
+-- drop policy if exists my_policy on public.some_table;
+-- create policy my_policy on public.some_table
+--   for select using (auth.uid() is not null);
+
+select 1 as migrations_template_placeholder;

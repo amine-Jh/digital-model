@@ -145,12 +145,52 @@ export async function listSessionsForStudent(
   return { data: data ?? [], error: error?.message ?? null }
 }
 
-/** Teacher/admin roster from `my_students` (RLS-scoped). */
+/**
+ * Sessions for a fixed set of student user ids (e.g. teacher roster).
+ * Prefer this over `listMySessions()` in teacher UIs so cohort stats never include
+ * the teacher’s own attempts or unrelated users if policies/views misbehave.
+ */
+export async function listSessionsForStudentIds(
+  studentUserIds: string[],
+  opts?: { testId?: string; limit?: number },
+): Promise<{ data: SessionRow[]; error: string | null }> {
+  const sb = getSupabaseBrowser()
+  await sb.auth.getUser()
+  if (studentUserIds.length === 0) {
+    return { data: [], error: null }
+  }
+  let q = sb
+    .from('test_sessions')
+    .select('*')
+    .in('user_id', studentUserIds)
+    .order('started_at', { ascending: false })
+    .limit(opts?.limit ?? 2000)
+  if (opts?.testId) q = q.eq('test_id', opts.testId)
+  const { data, error } = await q
+  return { data: data ?? [], error: error?.message ?? null }
+}
+
+/**
+ * Roster from `my_students`. For role `teacher`, rows are restricted to
+ * `teacher_id = auth user` (defense in depth on top of RLS).
+ */
 export async function listMyStudentsView(): Promise<{
   data: MyStudentViewRow[]
   error: string | null
 }> {
   const sb = getSupabaseBrowser()
-  const { data, error } = await sb.from('my_students').select('*').order('email', { ascending: true })
+  const {
+    data: { user },
+  } = await sb.auth.getUser()
+  if (!user) return { data: [], error: 'Not authenticated' }
+
+  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle()
+
+  let q = sb.from('my_students').select('*')
+  if (profile?.role === 'teacher') {
+    q = q.eq('teacher_id', user.id)
+  }
+
+  const { data, error } = await q.order('email', { ascending: true })
   return { data: (data ?? []) as MyStudentViewRow[], error: error?.message ?? null }
 }

@@ -68,7 +68,7 @@ export default function StudentDetailsPage({ params }: StudentDetailsPageProps) 
         const found = merged.find((s) => s.id === params.studentId) ?? null
         setStudent(found)
         setSessions(sess)
-        if (!found) router.replace('/teacher/dashboard')
+        if (!found) router.replace('/teacher/students')
       })
       .catch(() => {
         if (!cancelled) setLoadState('error')
@@ -99,6 +99,7 @@ export default function StudentDetailsPage({ params }: StudentDetailsPageProps) 
 
   const attemptHistory = useMemo(() => {
     const testToDomain = new Map(catalog.map((t) => [t.id, t.domain]))
+    const testToTitle = new Map(catalog.map((t) => [t.id, t.title]))
     return [...sessions]
       .filter((s) => s.status === 'completed' && s.score != null)
       .sort(
@@ -111,6 +112,7 @@ export default function StudentDetailsPage({ params }: StudentDetailsPageProps) 
         date: new Date(s.completed_at ?? s.started_at).toLocaleDateString('fr-FR'),
         score: Math.round(Number(s.score)),
         domain: testToDomain.get(s.test_id) ?? s.test_id,
+        testTitle: testToTitle.get(s.test_id) ?? s.test_id,
       }))
   }, [sessions, catalog])
 
@@ -462,8 +464,10 @@ export default function StudentDetailsPage({ params }: StudentDetailsPageProps) 
                       className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border hover:border-primary transition-colors"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-foreground">{attempt.domain}</p>
-                        <p className="text-xs text-muted-foreground">{attempt.date}</p>
+                        <p className="font-medium text-foreground">{attempt.testTitle}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {attempt.domain} · {attempt.date}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-primary">{attempt.score}%</p>

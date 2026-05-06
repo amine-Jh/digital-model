@@ -28,11 +28,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'nav.dashboard', href: '/dashboard', role: 'both' },
+  { icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'nav.dashboard', href: '/dashboard', role: 'student' },
+  { icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'nav.dashboard', href: '/teacher/dashboard', role: 'teacher' },
   { icon: <Brain className="w-5 h-5" />, labelKey: 'nav.domains', href: '/domains', role: 'student' },
   { icon: <ClipboardList className="w-5 h-5" />, labelKey: 'nav.tests', href: '/tests', role: 'student' },
   { icon: <FileText className="w-5 h-5" />, labelKey: 'nav.results', href: '/results', role: 'student' },
-  { icon: <Users className="w-5 h-5" />, labelKey: 'nav.students', href: '/students', role: 'teacher' },
+  { icon: <Users className="w-5 h-5" />, labelKey: 'nav.students', href: '/teacher/students', role: 'teacher' },
   { icon: <BarChart3 className="w-5 h-5" />, labelKey: 'nav.analytics', href: '/analytics', role: 'teacher' },
   { icon: <BookOpen className="w-5 h-5" />, labelKey: 'nav.reports', href: '/reports', role: 'teacher' },
 ]

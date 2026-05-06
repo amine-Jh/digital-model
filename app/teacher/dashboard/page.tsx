@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { StatCard } from '@/components/dashboard-cards'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { listMySessions, listMyStudentsView } from '@/lib/results/results-service'
+import { listMyStudentsView, listSessionsForStudentIds } from '@/lib/results/results-service'
 import { useTestsCatalog } from '@/hooks/use-tests-catalog'
 import {
   mergeRosterWithSessions,
@@ -66,16 +66,19 @@ export default function TeacherDashboard() {
     let cancelled = false
     setCohortLoading(true)
     setCohortError(null)
-    Promise.all([listMyStudentsView(), listMySessions({ limit: 2000 })])
-      .then(([rosterRes, sessRes]) => {
-        if (cancelled) return
-        const err = rosterRes.error ?? sessRes.error
-        if (err) setCohortError(err)
-        const roster = rosterRes.data ?? []
-        const sessions = sessRes.data ?? []
-        setMyStudents(mergeRosterWithSessions(roster, sessions))
-        setCohortSessions(sessions)
-      })
+    ;(async () => {
+      const rosterRes = await listMyStudentsView()
+      if (cancelled) return
+      const roster = rosterRes.data ?? []
+      const ids = roster.map((r) => r.user_id)
+      const sessRes = await listSessionsForStudentIds(ids, { limit: 2000 })
+      if (cancelled) return
+      const err = rosterRes.error ?? sessRes.error
+      if (err) setCohortError(err)
+      const sessions = sessRes.data ?? []
+      setMyStudents(mergeRosterWithSessions(roster, sessions))
+      setCohortSessions(sessions)
+    })()
       .catch(() => {
         if (!cancelled) setCohortError('Could not load roster or sessions.')
       })
@@ -430,8 +433,8 @@ export default function TeacherDashboard() {
                   Vous ne voyez que les élèves rattachés à votre compte enseignant.
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm">
-                View All
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/teacher/students">View All</Link>
               </Button>
             </CardHeader>
             <CardContent>
