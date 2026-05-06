@@ -8,7 +8,6 @@ import { useIsMobile } from '@/components/ui/use-mobile'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import {
   Target,
   Activity,
@@ -364,13 +363,8 @@ export default function ResultsPage() {
           <div className="space-y-6">
             {groupedDomains.map(({ domain, tests }) => {
               const ui = getDomainPresentation(domain)
-              const domainScore = averageCompletedScore(tests)
               const completed = tests.filter((t) => t.status === 'completed').length
               const total = tests.length
-              const hasNumericScores = tests.some((t) => t.latestScore != null)
-              const completionPct = total ? Math.round((completed / total) * 100) : 0
-              /** Bar reflects catalogue completion; headline stays mean score when available. */
-              const progressBarValue = hasNumericScores ? domainScore : completionPct
 
               return (
                 <Card key={domain} className="overflow-hidden">
@@ -383,44 +377,11 @@ export default function ResultsPage() {
                         <span style={{ color: ui.color }}>{ui.icon}</span>
                         <div>
                           <CardTitle className="text-base">{domain}</CardTitle>
-                          <p className="text-xs text-muted-foreground">{ui.nameFr}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {ui.nameFr} · {completed}/{total} terminés — score final par test ci-dessous
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        {user && !sessionDataReady ? (
-                          <div className="flex flex-col items-end gap-2">
-                            <ValueHeadlineSkeleton className="self-end" />
-                            <Skeleton className="h-3 w-36 rounded" />
-                          </div>
-                        ) : (
-                          <>
-                        <p
-                          className="text-2xl font-bold"
-                          style={{ color: ui.color }}
-                        >
-                          {completed > 0 && hasNumericScores ? `${domainScore}%` : '—'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {completed}/{total} completed
-                          {!hasNumericScores && completed > 0
-                            ? ` · bar: ${completionPct}% of catalogue`
-                            : ''}
-                        </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-3">
-                      {user && !sessionDataReady ? (
-                        <Skeleton className="h-2 w-full rounded-full" />
-                      ) : (
-                      <Progress
-                        value={progressBarValue}
-                        className="h-2"
-                        style={{ '--progress-color': ui.color } as React.CSSProperties}
-                      />
-                      )}
                     </div>
                   </CardHeader>
 

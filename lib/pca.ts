@@ -44,7 +44,7 @@ export function simulatePcaResult(): PcaResult {
   // Values based on visual-spatial + math performance research (Lohman 1996, Carroll 1993)
   const loadings: PcaLoading[] = [
     { variable: 'visual-processing',    variableFr: 'Traitement visuel',      pc1Loading:  0.82, pc2Loading:  0.15, pc3Loading:  0.21 },
-    { variable: 'spatial-reasoning',    variableFr: 'Raisonnement spatial',    pc1Loading:  0.78, pc2Loading:  0.31, pc3Loading:  0.14 },
+    { variable: 'cognitive-capacity',   variableFr: 'Capacité cognitive (dont spatial)', pc1Loading:  0.78, pc2Loading:  0.31, pc3Loading:  0.14 },
     { variable: 'working-memory',       variableFr: 'Mémoire de travail',      pc1Loading:  0.42, pc2Loading:  0.61, pc3Loading:  0.48 },
     { variable: 'attention',            variableFr: 'Attention',               pc1Loading:  0.25, pc2Loading:  0.38, pc3Loading:  0.72 },
     { variable: 'reasoning',            variableFr: 'Raisonnement',            pc1Loading:  0.35, pc2Loading:  0.79, pc3Loading:  0.22 },

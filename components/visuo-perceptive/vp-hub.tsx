@@ -5,11 +5,9 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Brain, ImagePlus, Play, RotateCcw, CheckCircle2 } from 'lucide-react'
+import { Brain, Play, RotateCcw, CheckCircle2 } from 'lucide-react'
 import { VP_SUBTESTS, CORRECTIONS, resultStorageKey, candidateFilenames } from '@/lib/visuo-perceptive'
 import { listStoredImages } from '@/lib/visuo-perceptive/image-store'
-import { VPImageUploader } from './vp-image-uploader'
 
 export function VPHub() {
   const [stored, setStored] = useState<string[]>([])
@@ -64,84 +62,65 @@ export function VPHub() {
         </div>
       </div>
 
-      <Tabs defaultValue="tests">
-        <TabsList>
-          <TabsTrigger value="tests">
-            <Play className="mr-2 h-4 w-4" /> Passation
-          </TabsTrigger>
-          <TabsTrigger value="images">
-            <ImagePlus className="mr-2 h-4 w-4" /> Gestion des images
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="tests">
-          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {VP_SUBTESTS.map((s) => {
-              const corr = CORRECTIONS[s.id]
-              const total = Object.keys(corr).length
-              const trials = s.memoryOddEven ? Math.floor(total / 2) : total
-              const imagesPresent = Object.keys(corr).filter((n) =>
-                candidateFilenames(s.id, parseInt(n, 10)).some((c) => stored.includes(c)),
-              ).length
-              const result = resultsMap[s.id]
-              return (
-                <Card key={s.id} className="flex flex-col p-5">
-                  <div className="mb-2 flex items-center justify-between">
-                    <Badge variant="outline" className="capitalize">
-                      {s.category}
-                    </Badge>
-                    <Badge>{s.choices} choix</Badge>
+      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {VP_SUBTESTS.map((s) => {
+          const corr = CORRECTIONS[s.id]
+          const total = Object.keys(corr).length
+          const trials = s.memoryOddEven ? Math.floor(total / 2) : total
+          const imagesPresent = Object.keys(corr).filter((n) =>
+            candidateFilenames(s.id, parseInt(n, 10)).some((c) => stored.includes(c)),
+          ).length
+          const result = resultsMap[s.id]
+          return (
+            <Card key={s.id} className="flex flex-col p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <Badge variant="outline" className="capitalize">
+                  {s.category}
+                </Badge>
+                <Badge>{s.choices} choix</Badge>
+              </div>
+              <h3 className="text-lg font-semibold">{s.title}</h3>
+              <p className="mt-1 flex-1 text-sm text-muted-foreground">{s.description}</p>
+              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                <div>
+                  {trials} essai(s){s.memoryOddEven ? ' • stimulus 3s + choix' : ''}
+                </div>
+                <div>
+                  Images : {imagesPresent}/{total}{' '}
+                  {total === 0 && <span className="text-amber-600">(à compléter)</span>}
+                </div>
+                {result && (
+                  <div className="flex items-center gap-1 text-emerald-600">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Dernier score : {Math.round(result.pct)} %
                   </div>
-                  <h3 className="text-lg font-semibold">{s.title}</h3>
-                  <p className="mt-1 flex-1 text-sm text-muted-foreground">{s.description}</p>
-                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    <div>
-                      {trials} essai(s){s.memoryOddEven ? ' • stimulus 3s + choix' : ''}
-                    </div>
-                    <div>
-                      Images : {imagesPresent}/{total}{' '}
-                      {total === 0 && <span className="text-amber-600">(à compléter)</span>}
-                    </div>
-                    {result && (
-                      <div className="flex items-center gap-1 text-emerald-600">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Dernier score : {Math.round(result.pct)} %
-                      </div>
+                )}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Link href={`/tests/${s.testId}`} className="flex-1">
+                  <Button className="w-full" disabled={total === 0}>
+                    {result ? (
+                      <>
+                        <RotateCcw className="mr-2 h-4 w-4" /> Reprendre
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" /> Commencer
+                      </>
                     )}
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <Link href={`/tests/${s.testId}`} className="flex-1">
-                      <Button className="w-full" disabled={total === 0}>
-                        {result ? (
-                          <>
-                            <RotateCcw className="mr-2 h-4 w-4" /> Reprendre
-                          </>
-                        ) : (
-                          <>
-                            <Play className="mr-2 h-4 w-4" /> Commencer
-                          </>
-                        )}
-                      </Button>
-                    </Link>
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
 
-          <div className="mt-6 flex justify-end">
-            <Link href="/results/visuo-perceptive">
-              <Button variant="outline">Voir profil cognitif & recommandations</Button>
-            </Link>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="images">
-          <div className="mt-4">
-            <VPImageUploader />
-          </div>
-        </TabsContent>
-      </Tabs>
+      <div className="mt-6 flex justify-end">
+        <Link href="/results/visuo-perceptive">
+          <Button variant="outline">Voir profil cognitif & recommandations</Button>
+        </Link>
+      </div>
     </div>
   )
 }

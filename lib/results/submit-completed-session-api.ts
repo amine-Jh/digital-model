@@ -22,12 +22,14 @@ export type SubmitCompletedSessionInput = {
   startedAt?: string
   completedAt?: string
   totalMs?: number | null
-  /** Final percent 0–100 → `test_sessions.score`. */
+  /** Final percent 0–100 → `test_sessions.score` (ignored when `pendingAdminValidation`). */
   score: number
   correctCount: number
   totalQuestions: number
   trials: CompletedSessionTrialInput[]
   metadata?: Record<string, unknown>
+  /** When true, session is stored with `score: null` until an administrator validates. */
+  pendingAdminValidation?: boolean
 }
 
 export type SubmitCompletedSessionResult =
@@ -74,11 +76,12 @@ export async function submitCompletedTestSession(
         startedAt: input.startedAt,
         completedAt: input.completedAt,
         totalMs: input.totalMs,
-        score: clampPercent(input.score),
-        correctCount: Math.max(0, Math.round(input.correctCount)),
+        score: input.pendingAdminValidation ? null : clampPercent(input.score),
+        correctCount: input.pendingAdminValidation ? null : Math.max(0, Math.round(input.correctCount)),
         totalQuestions: Math.max(0, Math.round(input.totalQuestions)),
         trials,
         metadata: input.metadata ?? {},
+        pendingAdminValidation: input.pendingAdminValidation === true,
       }),
     })
     const body = (await res.json().catch(() => ({}))) as {

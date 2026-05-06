@@ -174,16 +174,30 @@ function Intro({ onNext, onQuit }: { onNext: () => void; onQuit: () => void }) {
           <Clock className="h-4 w-4" /> Attention soutenue
         </div>
         <h1 className="mb-3 text-3xl font-bold">Sustained Attention to Response Task (SART)</h1>
-        <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-          La tâche SART mesure l’attention soutenue avec inhibition de réponse. Des stimuli vous
-          sont présentés : vous devez répondre aux stimuli non-cibles et vous abstenir de
-          répondre aux stimuli cibles.
-        </p>
-        <p className="text-xs italic text-muted-foreground">
-          Référence : Vallesi et al. (2021)
-        </p>
+        <div className="mb-6 space-y-3 text-sm leading-relaxed text-muted-foreground">
+          <p>
+            Le SART (Sustained Attention to Response Test) a été conçu par Robertson et ses collègues
+            en 1997 (Robertson, Andrade, Baddeley et Yiend) et a ensuite été utilisé dans plusieurs
+            études scientifiques consacrées à l&apos;attention soutenue.
+          </p>
+          <p>
+            Robertson, Manly, Andrade, Baddeley et Yiend (1997) ont développé une nouvelle tâche de
+            performance continue (Continuous Performance Task – CPT), appelée SART. Cette tâche implique
+            une réponse motrice à des stimuli fréquents et l&apos;inhibition d&apos;une réponse motrice
+            face à un stimulus rare.
+          </p>
+          <p>
+            Les chercheurs ont supposé que le SART constituerait une meilleure mesure de l&apos;attention
+            soutenue, car il est moins vulnérable que les tâches classiques de vigilance aux réponses
+            devenant rapidement automatiques plutôt que contrôlées.
+          </p>
+          <p>
+            Le SART s&apos;est effectivement révélé sensible à la capacité de maintenir l&apos;attention dans
+            des tâches monotones mais exigeantes (Robertson et al., 1997).
+          </p>
+        </div>
 
-        <div className="mt-6">
+        <div className="mt-2">
           <TestIntroSection testId={SUSTAINED_ATTENTION_TEST_ID} />
         </div>
 

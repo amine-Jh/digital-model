@@ -101,17 +101,35 @@ export function TrailMakingTest() {
             <Route className="h-4 w-4" /> Attention visuo-spatiale
           </div>
           <h1 className="mb-3 text-3xl font-bold">Trail Making Test</h1>
-          <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-            Le Trail Making Test mesure l’attention visuelle, la vitesse de traitement et la
-            flexibilité cognitive. Vous devez relier des cercles rapidement et avec précision.
-          </p>
-          <ul className="mb-6 ml-6 list-disc text-sm text-muted-foreground">
-            <li>Partie A : relier des chiffres dans l’ordre croissant (1 → 2 → 3 …)</li>
-            <li>
-              Partie B : alterner chiffres et lettres (1 → A → 2 → B → 3 → C …)
-            </li>
-            <li>Chaque partie commence par un entraînement, puis un test.</li>
-          </ul>
+          <div className="mb-6 space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Le Trail Making Test (TMT) est une évaluation neuropsychologique largement utilisée pour
+              mesurer les fonctions exécutives, notamment chez les patients ayant subi un AVC ou
+              présentant des troubles cognitifs.
+            </p>
+            <p>L&apos;exécution correcte du TMT mobilise plusieurs capacités mentales essentielles, notamment :</p>
+            <ul className="ml-6 list-disc space-y-1">
+              <li>la reconnaissance des chiffres et des lettres ;</li>
+              <li>la flexibilité mentale ;</li>
+              <li>le balayage visuel ;</li>
+              <li>l&apos;attention visuo-spatiale ;</li>
+              <li>les fonctions visuo-motrices ;</li>
+              <li>et la vitesse de traitement cognitif.</li>
+            </ul>
+            <p>
+              La performance est évaluée à travers deux conditions différentes de traitement visuel et
+              de balayage visuo-moteur :
+            </p>
+            <ul className="ml-6 list-disc space-y-1">
+              <li>Partie A : relier les nombres de 1 à 25 dans l&apos;ordre croissant ;</li>
+              <li>
+                Partie B : relier alternativement les nombres et les lettres dans l&apos;ordre croissant.
+              </li>
+            </ul>
+            <p className="text-xs">
+              Chaque partie commence par un entraînement, puis un test chronométré.
+            </p>
+          </div>
 
           <div className="mb-6">
             <TestIntroSection testId={TRAIL_MAKING_TEST_ID} />

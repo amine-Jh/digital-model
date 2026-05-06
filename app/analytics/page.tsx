@@ -40,6 +40,7 @@ import { useTestsCatalog } from '@/hooks/use-tests-catalog'
 import { listMyStudentsView, listSessionsForStudentIds } from '@/lib/results/results-service'
 import { classDomainAveragesFromSessions } from '@/lib/teacher-cohort-stats'
 import type { Database } from '@/lib/types/database'
+import { cohortTvps3MeanFromSessions } from '@/lib/tvps-aggregate-score'
 
 type SessionRow = Database['public']['Tables']['test_sessions']['Row']
 
@@ -68,6 +69,11 @@ export default function AnalyticsPage() {
     const rows = classDomainAveragesFromSessions(catalog, cohortSessions)
     return rows.map((r) => ({ domain: r.domain, score: r.avgScore }))
   }, [catalog, cohortSessions])
+
+  const tvpsCohortMean = useMemo(
+    () => cohortTvps3MeanFromSessions(cohortSessions),
+    [cohortSessions],
+  )
 
   const chartData = useDemoAnalytics ? radarDemo : teacherDomainProfile
 
@@ -196,6 +202,20 @@ export default function AnalyticsPage() {
             <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
               {cohortError}
             </p>
+          )}
+
+          {!useDemoAnalytics && tvpsCohortMean != null && (
+            <Card className="border-violet-200 bg-violet-50/40 dark:bg-violet-950/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Visuoperceptual Skills (TVPS-3)</CardTitle>
+                <CardDescription>
+                  Moyenne des scores des sous-tests TVPS sur la cohorte (sessions terminées).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold tabular-nums text-violet-700">{tvpsCohortMean}%</p>
+              </CardContent>
+            </Card>
           )}
           {useDemoAnalytics && (
             <div className="flex flex-wrap gap-4 items-end">

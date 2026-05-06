@@ -47,7 +47,9 @@ function RotationImage({ src, questionNumber }: { src: string; questionNumber: n
     return (
       <div className="w-full aspect-video max-w-xl mx-auto rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex flex-col items-center justify-center gap-2">
         <Brain className="w-10 h-10 text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">rotation ({questionNumber}).jpg</p>
+        <p className="text-sm text-muted-foreground">
+          rotation ({questionNumber}).jpg ou Rotation ({questionNumber}).png
+        </p>
         <p className="text-xs text-muted-foreground/60">Déposez l&apos;image dans <code className="bg-muted px-1 rounded">public/rotation/</code></p>
       </div>
     )
@@ -196,9 +198,8 @@ function ScoreScreen({ result }: { result: RotationResult }) {
   const mm = String(Math.floor(result.timeUsedSeconds / 60)).padStart(2, '0')
   const ss = String(result.timeUsedSeconds % 60).padStart(2, '0')
 
-  const fullMark  = result.responses.filter((r) => r.score === 2).length
-  const halfMark  = result.responses.filter((r) => r.score === 1).length
-  const zeroMark  = result.responses.filter((r) => r.score === 0).length
+  const fullMark = result.responses.filter((r) => r.score === 1).length
+  const zeroMark = result.responses.filter((r) => r.score === 0).length
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -219,14 +220,10 @@ function ScoreScreen({ result }: { result: RotationResult }) {
         </div>
 
         {/* Breakdown */}
-        <div className="grid grid-cols-3 gap-3 text-center text-sm">
+        <div className="grid grid-cols-2 gap-3 text-center text-sm">
           <div className="rounded-lg bg-green-50 border border-green-200 p-3">
             <p className="text-2xl font-bold text-green-700">{fullMark}</p>
-            <p className="text-xs text-green-600">+2 pts (les deux)</p>
-          </div>
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-            <p className="text-2xl font-bold text-amber-700">{halfMark}</p>
-            <p className="text-xs text-amber-600">+1 pt (une seule)</p>
+            <p className="text-xs text-green-600">+1 pt (2 bonnes réponses)</p>
           </div>
           <div className="rounded-lg bg-red-50 border border-red-200 p-3">
             <p className="text-2xl font-bold text-red-700">{zeroMark}</p>
@@ -241,21 +238,17 @@ function ScoreScreen({ result }: { result: RotationResult }) {
             <div
               key={r.questionNumber}
               className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
-                r.score === 2
+                r.score === 1
                   ? 'bg-green-50 border border-green-100'
-                  : r.score === 1
-                    ? 'bg-amber-50 border border-amber-100'
-                    : 'bg-red-50 border border-red-100'
+                  : 'bg-red-50 border border-red-100'
               }`}
             >
               <span className="font-medium">Q{r.questionNumber}</span>
               <span className="text-muted-foreground">
                 {r.selected.length > 0 ? r.selected.join(', ') : '—'}
               </span>
-              <span className={`font-bold ${
-                r.score === 2 ? 'text-green-600' : r.score === 1 ? 'text-amber-600' : 'text-red-500'
-              }`}>
-                +{r.score} pt{r.score !== 1 ? 's' : ''}
+              <span className={`font-bold ${r.score === 1 ? 'text-green-600' : 'text-red-500'}`}>
+                +{r.score} pt
               </span>
             </div>
           ))}
@@ -305,8 +298,8 @@ export function MentalRotationTest() {
       question_index: i,
       question_id: `mr3d-${resp.questionNumber}`,
       selected: [...resp.selected],
-      correct: resp.score === 2,
-      score: resp.score / 2,
+      correct: resp.score === 1,
+      score: resp.score,
       reaction_time_ms: resp.responseTimeMs,
     }))
     persistCompletedTestSessionBestEffort({
@@ -314,7 +307,7 @@ export function MentalRotationTest() {
       completedAt: r.completedAt,
       totalMs: elapsedSeconds * 1000,
       score: Math.round((r.totalScore / r.maxScore) * 100),
-      correctCount: r.responses.filter((x) => x.score === 2).length,
+      correctCount: r.responses.filter((x) => x.score === 1).length,
       totalQuestions: r.responses.length,
       trials,
       metadata: { source: 'mental-rotation-3d', totalScoreRaw: r.totalScore },
@@ -495,6 +488,7 @@ export function MentalRotationTest() {
             {isLast ? (
               <Button
                 onClick={handleSubmit}
+                disabled={selected.length !== 2}
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-8"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -503,6 +497,7 @@ export function MentalRotationTest() {
             ) : (
               <Button
                 onClick={handleNext}
+                disabled={selected.length !== 2}
                 className="flex items-center gap-2 px-8"
               >
                 Suivant

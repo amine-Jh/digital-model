@@ -58,6 +58,8 @@ export interface Question {
   options?: string[]
   /** Zero-based index of correct option (MCQ); stored server-side for scoring only. */
   correctOptionIndex?: number
+  /** When set (e.g. geometry multi-answer MCQ), all listed indices must be selected and no others. */
+  correctOptionIndices?: number[]
   instructions?: string
   timeLimit?: number
   /** Display label shown to student, e.g. "Q1", "Q2" */
@@ -299,11 +301,11 @@ export const mockTests: Test[] = [
     type: 'mcq',
     duration: 1200,
     questions: [
-      { id: 'geo-cs-q1', label: 'Q1', competencyCode: 'C₁', type: 'mcq', question: 'L\'image du point A par la symétrie centrale de centre O est le point A\' tel que :', options: ['OA = OA\'', 'O est le milieu de [AA\']', 'AA\' est perpendiculaire à (OA)', 'OA = 2·OA\''], correctOptionIndex: 1, timeLimit: 45 },
-      { id: 'geo-cs-q2', label: 'Q2', competencyCode: 'C₂', type: 'mcq', question: 'L\'image de A(3, 1) par la symétrie centrale de centre O(0, 0) est :', options: ['A\'(3, −1)', 'A\'(−3, −1)', 'A\'(1, 3)', 'A\'(−3, 1)'], correctOptionIndex: 1, timeLimit: 45 },
-      { id: 'geo-cs-q3', label: 'Q3', competencyCode: 'C₃', type: 'mcq', question: 'La symétrie centrale conserve :', options: ['La position des points', 'Les distances et les angles', 'La direction des vecteurs', 'L\'orientation des figures'], correctOptionIndex: 1, timeLimit: 45 },
-      { id: 'geo-cs-q4', label: 'Q4', competencyCode: 'C₄', type: 'mcq', question: 'Quelle figure possède une symétrie centrale ?', options: ['Un triangle quelconque', 'Un rectangle', 'Un triangle rectangle', 'Un triangle isocèle quelconque'], correctOptionIndex: 1, timeLimit: 45 },
-      { id: 'geo-cs-q5', label: 'Q5', competencyCode: 'C₅', type: 'mcq', question: 'Si O est le milieu de [AB], alors B est l\'image de A par :', options: ['La symétrie axiale d\'axe (OA)', 'La symétrie centrale de centre O', 'La translation de vecteur OA⃗', 'La symétrie axiale d\'axe ⊥ à AB'], correctOptionIndex: 1, timeLimit: 45 },
+      { id: 'geo-cs-q1', label: 'Q1', competencyCode: 'C₁', type: 'mcq', question: 'L\'image du point A par la symétrie centrale de centre O est le point A\' tel que :', options: ['OA = OA\'', 'O est le milieu de [AA\']', 'AA\' est perpendiculaire à (OA)', 'OA = 2·OA\'', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
+      { id: 'geo-cs-q2', label: 'Q2', competencyCode: 'C₂', type: 'mcq', question: 'L\'image de A(3, 1) par la symétrie centrale de centre O(0, 0) est :', options: ['A\'(3, −1)', 'A\'(−3, −1)', 'A\'(1, 3)', 'A\'(−3, 1)', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
+      { id: 'geo-cs-q3', label: 'Q3', competencyCode: 'C₃', type: 'mcq', question: 'La symétrie centrale conserve :', options: ['La position des points', 'Les distances et les angles', 'La direction des vecteurs', 'L\'orientation des figures', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
+      { id: 'geo-cs-q4', label: 'Q4', competencyCode: 'C₄', type: 'mcq', question: 'Quelle figure possède une symétrie centrale ?', options: ['Un triangle quelconque', 'Un rectangle', 'Un triangle rectangle', 'Un triangle isocèle quelconque', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
+      { id: 'geo-cs-q5', label: 'Q5', competencyCode: 'C₅', type: 'mcq', question: 'Si O est le milieu de [AB], alors B est l\'image de A par :', options: ['La symétrie axiale d\'axe (OA)', 'La symétrie centrale de centre O', 'La translation de vecteur OA⃗', 'La symétrie axiale d\'axe ⊥ à AB', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
     ],
   },
   {
@@ -314,11 +316,11 @@ export const mockTests: Test[] = [
     type: 'mcq',
     duration: 1200,
     questions: [
-      { id: 'geo-as-q1', label: 'Q1', competencyCode: 'C₁', type: 'mcq', question: 'La symétrie axiale d\'axe d envoie tout point M sur M\' tel que :', options: ['d est parallèle à [MM\']', 'd est la médiatrice de [MM\']', 'd contient le milieu de [MM\']', 'M et M\' sont à égale distance de d'], correctOptionIndex: 1, timeLimit: 45 },
-      { id: 'geo-as-q2', label: 'Q2', competencyCode: 'C₂', type: 'mcq', question: 'L\'image de A(4, 2) par la symétrie axiale d\'axe des ordonnées (x = 0) est :', options: ['A\'(4, −2)', 'A\'(−4, −2)', 'A\'(−4, 2)', 'A\'(2, 4)'], correctOptionIndex: 2, timeLimit: 45 },
-      { id: 'geo-as-q3', label: 'Q3', competencyCode: 'C₃', type: 'mcq', question: 'La symétrie axiale est :', options: ['Une isométrie directe', 'Une isométrie indirecte', 'Une rotation', 'Une translation'], correctOptionIndex: 1, timeLimit: 45 },
-      { id: 'geo-as-q4', label: 'Q4', competencyCode: 'C₄', type: 'mcq', question: 'Parmi ces figures, laquelle possède un axe de symétrie ?', options: ['Un parallélogramme quelconque', 'Un triangle scalène', 'Un losange', 'Un quadrilatère quelconque'], correctOptionIndex: 2, timeLimit: 45 },
-      { id: 'geo-as-q5', label: 'Q5', competencyCode: 'C₅', type: 'mcq', question: 'La composée de deux symétries axiales d\'axes parallèles est :', options: ['Une rotation', 'Une symétrie centrale', 'Une translation', 'Une symétrie axiale'], correctOptionIndex: 2, timeLimit: 45 },
+      { id: 'geo-as-q1', label: 'Q1', competencyCode: 'C₁', type: 'mcq', question: 'La symétrie axiale d\'axe d envoie tout point M sur M\' tel que :', options: ['d est parallèle à [MM\']', 'd est la médiatrice de [MM\']', 'd contient le milieu de [MM\']', 'M et M\' sont à égale distance de d', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
+      { id: 'geo-as-q2', label: 'Q2', competencyCode: 'C₂', type: 'mcq', question: 'L\'image de A(4, 2) par la symétrie axiale d\'axe des ordonnées (x = 0) est :', options: ['A\'(4, −2)', 'A\'(−4, −2)', 'A\'(−4, 2)', 'A\'(2, 4)', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [2], timeLimit: 45 },
+      { id: 'geo-as-q3', label: 'Q3', competencyCode: 'C₃', type: 'mcq', question: 'La symétrie axiale est :', options: ['Une isométrie directe', 'Une isométrie indirecte', 'Une rotation', 'Une translation', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
+      { id: 'geo-as-q4', label: 'Q4', competencyCode: 'C₄', type: 'mcq', question: 'Parmi ces figures, laquelle possède un axe de symétrie ?', options: ['Un parallélogramme quelconque', 'Un triangle scalène', 'Un losange', 'Un quadrilatère quelconque', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [2], timeLimit: 45 },
+      { id: 'geo-as-q5', label: 'Q5', competencyCode: 'C₅', type: 'mcq', question: 'La composée de deux symétries axiales d\'axes parallèles est :', options: ['Une rotation', 'Une symétrie centrale', 'Une translation', 'Une symétrie axiale', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [2], timeLimit: 45 },
     ],
   },
   {
@@ -329,11 +331,11 @@ export const mockTests: Test[] = [
     type: 'mcq',
     duration: 1200,
     questions: [
-      { id: 'geo-lp-q1', label: 'Q1', competencyCode: 'C₁', type: 'mcq', question: 'L\'équation de la droite passant par (0, 3) avec une pente de 2 est :', options: ['y = 2x − 3', 'y = 3x + 2', 'y = 2x + 3', 'y = −2x + 3'], correctOptionIndex: 2, timeLimit: 45 },
-      { id: 'geo-lp-q2', label: 'Q2', competencyCode: 'C₂', type: 'mcq', question: 'Les droites y = 3x + 1 et y = 3x − 5 sont :', options: ['Sécantes', 'Perpendiculaires', 'Confondues', 'Parallèles'], correctOptionIndex: 3, timeLimit: 45 },
-      { id: 'geo-lp-q3', label: 'Q3', competencyCode: 'C₃', type: 'mcq', question: 'La pente d\'une droite perpendiculaire à y = 2x + 1 est :', options: ['2', '−1/2', '1/2', '−2'], correctOptionIndex: 1, timeLimit: 45 },
-      { id: 'geo-lp-q4', label: 'Q4', competencyCode: 'C₄', type: 'mcq', question: 'La distance du point (1, 2) à la droite d\'équation x − y = 0 est :', options: ['1/√2', '√2', '1', '2/√2'], correctOptionIndex: 0, timeLimit: 45 },
-      { id: 'geo-lp-q5', label: 'Q5', competencyCode: 'C₅', type: 'mcq', question: 'Les droites y = 2x + 1 et y = −x + 4 se coupent en :', options: ['(1, 3)', '(2, 5)', '(3, 7)', '(0, 1)'], correctOptionIndex: 0, timeLimit: 45 },
+      { id: 'geo-lp-q1', label: 'Q1', competencyCode: 'C₁', type: 'mcq', question: 'L\'équation de la droite passant par (0, 3) avec une pente de 2 est :', options: ['y = 2x − 3', 'y = 3x + 2', 'y = 2x + 3', 'y = −2x + 3', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [2], timeLimit: 45 },
+      { id: 'geo-lp-q2', label: 'Q2', competencyCode: 'C₂', type: 'mcq', question: 'Les droites y = 3x + 1 et y = 3x − 5 sont :', options: ['Sécantes', 'Perpendiculaires', 'Confondues', 'Parallèles', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [3], timeLimit: 45 },
+      { id: 'geo-lp-q3', label: 'Q3', competencyCode: 'C₃', type: 'mcq', question: 'La pente d\'une droite perpendiculaire à y = 2x + 1 est :', options: ['2', '−1/2', '1/2', '−2', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [1], timeLimit: 45 },
+      { id: 'geo-lp-q4', label: 'Q4', competencyCode: 'C₄', type: 'mcq', question: 'La distance du point (1, 2) à la droite d\'équation x − y = 0 est :', options: ['1/√2', '√2', '1', '2/√2', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [0], timeLimit: 45 },
+      { id: 'geo-lp-q5', label: 'Q5', competencyCode: 'C₅', type: 'mcq', question: 'Les droites y = 2x + 1 et y = −x + 4 se coupent en :', options: ['(1, 3)', '(2, 5)', '(3, 7)', '(0, 1)', 'Je sais pas', 'J\'ai oublié', 'Aucune réponse'], correctOptionIndices: [0], timeLimit: 45 },
     ],
   },
   {

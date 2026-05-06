@@ -4,6 +4,13 @@ import type { MainDomain } from './mock-data'
  * Seven top-level domains for the Moroccan cognitive & academic platform.
  * Capacities map to `testId` entries in the platform catalogue (`public.tests` / seed).
  */
+/** Test ids for the geometry cognition domain (Cₖ ventilation, multi-select MCQ, etc.). */
+export function geometryCognitionTestIds(): string[] {
+  const d = platformDomains.find((x) => x.id === 'geometry-learning')
+  if (!d) return []
+  return d.subdomains.flatMap((s) => s.capacities.map((c) => c.testId))
+}
+
 export const platformDomains: MainDomain[] = [
   {
     id: 'attentional-capacities',
@@ -39,13 +46,15 @@ export const platformDomains: MainDomain[] = [
     ],
   },
   {
-    id: 'spatial-reasoning',
-    name: 'Spatial reasoning',
-    description: 'Mental rotation, transformation, and spatial orientation.',
+    id: 'cognitive-capacity',
+    name: 'Cognitive capacity',
+    description:
+      'Higher-order cognitive components including spatial reasoning (mental rotation, orientation, transformation).',
     subdomains: [
       {
-        id: 'spatial-core',
-        name: 'Spatial cognition',
+        id: 'spatial-reasoning',
+        name: 'Spatial reasoning',
+        nameFr: 'Raisonnement spatial',
         capacities: [
           { id: 'mental-rotation', name: '3D mental rotation', testId: 'test-mental-rotation' },
           { id: 'mental-rotation-2d', name: '2D mental rotation', testId: 'test-mental-rotation-2d' },

@@ -22,6 +22,7 @@ import {
   completedSessionsChronology,
   type TestWithProgress,
 } from '@/lib/student-test-progress'
+import { computeTvps3MeanPercent } from '@/lib/tvps-aggregate-score'
 import { getDomainPresentation } from '@/lib/domain-ui'
 import type { Database } from '@/lib/types/database'
 import {
@@ -70,6 +71,7 @@ export default function StudentDashboard() {
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [dashFetchError, setDashFetchError] = useState<string | null>(null)
+  const [tvpsTick, setTvpsTick] = useState(0)
   const isMobile = useIsMobile()
 
   const mergedTests = useMemo(
@@ -114,6 +116,12 @@ export default function StudentDashboard() {
       cancelled = true
     }
   }, [user, fromDatabase])
+
+  useEffect(() => {
+    const onStorage = () => setTvpsTick((n) => n + 1)
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const groupedDomains = useMemo(() => groupTestsByDomain(mergedTests), [mergedTests])
 
@@ -214,9 +222,18 @@ export default function StudentDashboard() {
   const avgScore =
     completedWithScore.length > 0 ? averageCompletedScore(mergedTests) : null
 
-  const sortedCards = [...domainCards].sort((a, b) => b.score - a.score)
-  const strengths = sortedCards.slice(0, 2)
-  const weaknesses = sortedCards.slice(-2).reverse()
+  const tvpsMean = useMemo(() => {
+    void tvpsTick
+    return computeTvps3MeanPercent(mergedTests)
+  }, [mergedTests, tvpsTick])
+
+  const scoredDomains = domainCards.filter((d) => d.tests.some((t) => t.latestScore != null))
+  const strengths = scoredDomains
+    .filter((d) => d.score >= 50)
+    .sort((a, b) => b.score - a.score)
+  const weaknesses = scoredDomains
+    .filter((d) => d.score < 50)
+    .sort((a, b) => a.score - b.score)
   const sessionDataReady = !sessionsLoading
 
   return (
@@ -472,7 +489,12 @@ export default function StudentDashboard() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="rounded-xl bg-green-50 border border-green-100 p-4">
-                  <p className="text-sm font-semibold text-green-700 mb-2">Strengths</p>
+                  <p className="text-sm font-semibold text-green-700 mb-2">
+                    Forces (score moyen du domaine ≥ 50 %)
+                  </p>
+                  {strengths.length === 0 ? (
+                    <p className="text-xs text-green-800/80">Aucun domaine ≥ 50 % avec score enregistré.</p>
+                  ) : null}
                   {strengths.map((d) => (
                     <div key={d.domain} className="flex items-center justify-between text-sm py-1">
                       <span className="text-green-800">{d.domain}</span>
@@ -487,7 +509,12 @@ export default function StudentDashboard() {
                   ))}
                 </div>
                 <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
-                  <p className="text-sm font-semibold text-amber-700 mb-2">Areas to improve</p>
+                  <p className="text-sm font-semibold text-amber-700 mb-2">
+                    Axes à renforcer (score moyen du domaine &lt; 50 %)
+                  </p>
+                  {weaknesses.length === 0 ? (
+                    <p className="text-xs text-amber-800/80">Aucun domaine &lt; 50 % avec score enregistré.</p>
+                  ) : null}
                   {weaknesses.map((d) => (
                     <div key={d.domain} className="flex items-center justify-between text-sm py-1">
                       <span className="text-amber-800">{d.domain}</span>
@@ -501,6 +528,22 @@ export default function StudentDashboard() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4">
+                <p className="text-sm font-semibold text-violet-800 mb-1">
+                  Visuoperceptual Skills (TVPS-3)
+                </p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Moyenne des sous-tests TVPS (sessions Supabase ou scores locaux du navigateur).
+                </p>
+                {sessionDataReady ? (
+                  <p className="text-2xl font-bold tabular-nums text-violet-700">
+                    {tvpsMean != null ? `${tvpsMean}%` : '—'}
+                  </p>
+                ) : (
+                  <ValueTextSkeleton className="h-9 w-16" />
+                )}
               </div>
             </CardContent>
           </Card>

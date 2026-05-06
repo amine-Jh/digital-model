@@ -12,7 +12,7 @@ import { platformDomains } from '@/lib/platform-domains'
 const shortNames: Record<string, string> = {
   'attentional-capacities': 'Attention',
   'reasoning-capacities':   'Raisonnement',
-  'spatial-reasoning':      'Spatial',
+  'cognitive-capacity':     'Cap. cognitive',
   'visual-processing':      'Visuel',
   'memory-capacities':      'Mémoire',
   'executive-functions':    'Exécutives',
