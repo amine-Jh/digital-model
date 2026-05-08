@@ -6,6 +6,7 @@
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
 import { platformDomains } from '@/lib/platform-domains'
+import { VP_SUBTESTS } from '@/lib/visuo-perceptive'
 import { latestSessionByTestId } from '@/lib/student-test-progress'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
@@ -44,10 +45,13 @@ export function domainAverageForAdminStudent(
 ): number {
   const d = platformDomains.find((x) => x.id === domainId)
   if (!d) return 0
-  const testIds = d.subdomains.flatMap((s) => s.capacities.map((c) => c.testId))
+  let testIds = d.subdomains.flatMap((s) => s.capacities.map((c) => c.testId))
+  if (domainId === 'visual-processing') {
+    testIds = VP_SUBTESTS.map((s) => s.testId)
+  }
   const vals = testIds
     .map((tid) => student.testScores[tid])
-    .filter((v): v is number => typeof v === 'number' && !Number.isNaN(v))
+    .filter((v): v is number => typeof v === 'number' && !Number.isNaN(v) && v >= 0)
   if (!vals.length) return 0
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 }
@@ -127,6 +131,11 @@ export async function fetchAdminResultsData(): Promise<{
     for (const [tid, row] of latest) {
       if (row.status === 'completed' && row.score != null) {
         testScores[tid] = Math.round(Number(row.score))
+      } else if (row.status === 'completed' && row.score == null && row.metadata && typeof row.metadata === 'object') {
+        const meta = row.metadata as Record<string, unknown>
+        if (meta.pendingAdminValidation === true) {
+          testScores[tid] = -1
+        }
       }
       if (row.status === 'completed' && row.metadata && typeof row.metadata === 'object') {
         const meta = row.metadata as Record<string, unknown>

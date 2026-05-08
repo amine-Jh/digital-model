@@ -1,21 +1,5 @@
--- =============================================================================
--- CogniTest — Supabase schema
--- =============================================================================
--- Full single-file bootstrap (schema + RLS): ../migrations/0001_baseline.sql
--- Migrations folder guide: ../migrations/README.md
---
--- Split apply on Supabase (SQL Editor):
---   1. paste this file, run it
---   2. paste supabase/policies.sql, run it
---   3. (optional) paste supabase/seed.sql, run it
---
--- All identifiers use snake_case. Timestamps use TIMESTAMPTZ.
--- The `auth.users` table is provided by Supabase Auth; we never write to it
--- directly — we extend it via the public.profiles 1-to-1 mapping.
--- =============================================================================
-
-create extension if not exists "pgcrypto";   -- gen_random_uuid()
-create extension if not exists "uuid-ossp";  -- uuid_generate_v4 (legacy)
+create extension if not exists "pgcrypto";
+create extension if not exists "uuid-ossp";
 
 -- -----------------------------------------------------------------------------
 -- Enums
@@ -40,7 +24,6 @@ begin
   end if;
 end$$;
 
--- Generic touch-updated_at (used by profiles, schools, …)
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
@@ -49,7 +32,7 @@ begin
 end$$;
 
 -- -----------------------------------------------------------------------------
--- schools  (establishments; teachers attach via profiles.school_id)
+-- schools
 -- -----------------------------------------------------------------------------
 create table if not exists public.schools (
   id          uuid primary key default gen_random_uuid(),
@@ -68,7 +51,7 @@ create trigger trg_schools_touch
   for each row execute function public.touch_updated_at();
 
 -- -----------------------------------------------------------------------------
--- profiles  (1-to-1 with auth.users)
+-- profiles (1-to-1 with auth.users on Supabase)
 -- -----------------------------------------------------------------------------
 create table if not exists public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
@@ -83,9 +66,6 @@ create table if not exists public.profiles (
 create index if not exists profiles_role_idx on public.profiles (role);
 create index if not exists profiles_school_idx on public.profiles (school_id);
 
--- Trigger: auto-create a profile row when a new auth.users row appears.
--- Role defaults to 'student' but can be overridden by raw_user_meta_data.role
--- at sign-up time.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -136,7 +116,7 @@ create trigger trg_profiles_touch
   for each row execute function public.touch_updated_at();
 
 -- -----------------------------------------------------------------------------
--- student_profiles  (student-specific extras + teacher link)
+-- student_profiles
 -- -----------------------------------------------------------------------------
 create table if not exists public.student_profiles (
   user_id                  uuid primary key references public.profiles(id) on delete cascade,
@@ -162,12 +142,12 @@ create trigger trg_student_profiles_touch
   for each row execute function public.touch_updated_at();
 
 -- -----------------------------------------------------------------------------
--- tests  (catalogue — referenced by test_sessions.test_id)
+-- tests
 -- -----------------------------------------------------------------------------
 create table if not exists public.tests (
-  id           text primary key,                -- e.g. 'test-symetrie-axiale'
+  id           text primary key,
   name         text not null,
-  domain       text not null,                   -- 'cognition-geometrie' | 'attentional' | …
+  domain       text not null,
   description  text,
   metadata     jsonb not null default '{}'::jsonb,
   is_active    boolean not null default true,
@@ -183,17 +163,16 @@ create trigger trg_tests_touch
   for each row execute function public.touch_updated_at();
 
 -- -----------------------------------------------------------------------------
--- questions  (canonical question bank — optional; you may keep questions
--- in code and skip this table for now, but the FK is here for the future).
+-- questions
 -- -----------------------------------------------------------------------------
 create table if not exists public.questions (
   id              uuid primary key default gen_random_uuid(),
   test_id         text not null references public.tests(id) on delete cascade,
-  external_id     text not null,                 -- e.g. 'Q19a'
+  external_id     text not null,
   prompt          text,
   options         jsonb not null default '[]'::jsonb,
-  correct_answer  jsonb,                          -- number | number[] | null
-  competencies    text[] not null default '{}',   -- {C1, C2}
+  correct_answer  jsonb,
+  competencies    text[] not null default '{}',
   position        int,
   metadata        jsonb not null default '{}'::jsonb,
   unique (test_id, external_id)
@@ -202,7 +181,7 @@ create table if not exists public.questions (
 create index if not exists questions_test_idx on public.questions (test_id, position);
 
 -- -----------------------------------------------------------------------------
--- test_sessions  (one row per attempt of a test by a user)
+-- test_sessions
 -- -----------------------------------------------------------------------------
 create table if not exists public.test_sessions (
   id                uuid primary key default gen_random_uuid(),
@@ -212,7 +191,7 @@ create table if not exists public.test_sessions (
   started_at        timestamptz not null default now(),
   completed_at      timestamptz,
   total_ms          int,
-  score             numeric(5,2),                -- final % (0–100), supports partial credit
+  score             numeric(5,2),
   correct_count     int,
   total_questions   int,
   metadata          jsonb not null default '{}'::jsonb,
@@ -230,17 +209,17 @@ create trigger trg_test_sessions_touch
   for each row execute function public.touch_updated_at();
 
 -- -----------------------------------------------------------------------------
--- trial_results  (per-question response inside a session)
+-- trial_results
 -- -----------------------------------------------------------------------------
 create table if not exists public.trial_results (
   id                bigserial primary key,
   session_id        uuid not null references public.test_sessions(id) on delete cascade,
   question_index    int not null,
   question_id       text not null,
-  selected          jsonb not null default '[]'::jsonb,  -- number[]
+  selected          jsonb not null default '[]'::jsonb,
   free_text         text,
   correct           boolean not null default false,
-  score             numeric(4,3) not null default 0,     -- per-question score in [0, 1]
+  score             numeric(4,3) not null default 0,
   reaction_time_ms  int,
   created_at        timestamptz not null default now()
 );
@@ -248,13 +227,12 @@ create table if not exists public.trial_results (
 create index if not exists trial_results_session_idx on public.trial_results (session_id, question_index);
 
 -- -----------------------------------------------------------------------------
--- metrics  (longitudinal aggregates — refreshed nightly or on insert).
--- One row per (user, test_id, period). Period is a yyyy-mm string.
+-- metrics
 -- -----------------------------------------------------------------------------
 create table if not exists public.metrics (
   user_id        uuid not null references public.profiles(id) on delete cascade,
   test_id        text not null references public.tests(id) on delete cascade,
-  period         text not null,                          -- e.g. '2026-05'
+  period         text not null,
   attempts       int not null default 0,
   best_score     numeric(5,2),
   avg_score      numeric(5,2),
@@ -266,7 +244,7 @@ create table if not exists public.metrics (
 create index if not exists metrics_test_period_idx on public.metrics (test_id, period);
 
 -- -----------------------------------------------------------------------------
--- Helper view: my_students  (a teacher's roster derived from student_profiles)
+-- View: teacher roster helper
 -- -----------------------------------------------------------------------------
 create or replace view public.my_students as
   select
@@ -279,3 +257,211 @@ create or replace view public.my_students as
     sp.teacher_id
   from public.student_profiles sp
   join public.profiles p on p.id = sp.user_id;
+
+-- =============================================================================
+-- Row Level Security (run in same transaction / immediately after schema)
+-- =============================================================================
+
+create or replace function public.role_of(uid uuid)
+returns public.user_role
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select role from public.profiles where id = uid
+$$;
+
+revoke all on function public.role_of(uuid) from public;
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    grant execute on function public.role_of(uuid) to authenticated;
+  end if;
+end
+$$;
+
+create or replace function public.is_admin()
+returns boolean language sql stable as $$
+  select coalesce(public.role_of(auth.uid()) in ('admin', 'super_admin'), false)
+$$;
+
+create or replace function public.is_teacher()
+returns boolean language sql stable as $$
+  select coalesce(public.role_of(auth.uid()) = 'teacher', false)
+$$;
+
+create or replace function public.is_super_admin()
+returns boolean language sql stable as $$
+  select coalesce(public.role_of(auth.uid()) = 'super_admin', false)
+$$;
+
+create or replace function public.is_my_student(student uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.student_profiles
+    where user_id = student
+      and teacher_id = auth.uid()
+  )
+$$;
+
+-- profiles
+alter table public.profiles enable row level security;
+
+drop policy if exists profiles_self_read     on public.profiles;
+drop policy if exists profiles_admin_read    on public.profiles;
+drop policy if exists profiles_teacher_read  on public.profiles;
+drop policy if exists profiles_self_update   on public.profiles;
+drop policy if exists profiles_admin_update  on public.profiles;
+
+create policy profiles_self_read on public.profiles
+  for select using (auth.uid() = id);
+
+drop policy if exists profiles_teacher_directory on public.profiles;
+create policy profiles_teacher_directory on public.profiles
+  for select using (role = 'teacher' and auth.uid() is not null);
+
+create policy profiles_admin_read on public.profiles
+  for select using (public.is_admin());
+
+create policy profiles_teacher_read on public.profiles
+  for select using (public.is_teacher() and public.is_my_student(id));
+
+create policy profiles_self_update on public.profiles
+  for update using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy profiles_admin_update on public.profiles
+  for update using (public.is_admin()) with check (public.is_admin());
+
+-- schools
+alter table public.schools enable row level security;
+
+drop policy if exists schools_public_read on public.schools;
+create policy schools_public_read on public.schools
+  for select using (is_active = true);
+
+drop policy if exists schools_super_admin_all on public.schools;
+create policy schools_super_admin_all on public.schools
+  for all using (public.is_super_admin()) with check (public.is_super_admin());
+
+-- student_profiles
+alter table public.student_profiles enable row level security;
+
+drop policy if exists sp_self_rw         on public.student_profiles;
+drop policy if exists sp_teacher_read    on public.student_profiles;
+drop policy if exists sp_admin_all       on public.student_profiles;
+
+create policy sp_self_rw on public.student_profiles
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy sp_teacher_read on public.student_profiles
+  for select using (public.is_teacher() and teacher_id = auth.uid());
+
+create policy sp_admin_all on public.student_profiles
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- tests + questions
+alter table public.tests enable row level security;
+
+drop policy if exists tests_read_authed   on public.tests;
+drop policy if exists tests_admin_write   on public.tests;
+
+create policy tests_read_authed on public.tests
+  for select using (auth.role() = 'authenticated');
+
+create policy tests_admin_write on public.tests
+  for all using (public.is_admin()) with check (public.is_admin());
+
+alter table public.questions enable row level security;
+
+drop policy if exists questions_read_authed  on public.questions;
+drop policy if exists questions_admin_write  on public.questions;
+
+create policy questions_read_authed on public.questions
+  for select using (auth.role() = 'authenticated');
+
+create policy questions_admin_write on public.questions
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- test_sessions
+alter table public.test_sessions enable row level security;
+
+drop policy if exists ts_self_select   on public.test_sessions;
+drop policy if exists ts_self_insert   on public.test_sessions;
+drop policy if exists ts_self_update   on public.test_sessions;
+drop policy if exists ts_teacher_read  on public.test_sessions;
+drop policy if exists ts_admin_all     on public.test_sessions;
+
+create policy ts_self_select on public.test_sessions
+  for select using (auth.uid() = user_id);
+
+create policy ts_self_insert on public.test_sessions
+  for insert with check (auth.uid() = user_id);
+
+create policy ts_self_update on public.test_sessions
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy ts_teacher_read on public.test_sessions
+  for select using (public.is_teacher() and public.is_my_student(user_id));
+
+create policy ts_admin_all on public.test_sessions
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- trial_results
+alter table public.trial_results enable row level security;
+
+drop policy if exists tr_self_select   on public.trial_results;
+drop policy if exists tr_self_insert   on public.trial_results;
+drop policy if exists tr_teacher_read  on public.trial_results;
+drop policy if exists tr_admin_all     on public.trial_results;
+
+create policy tr_self_select on public.trial_results
+  for select using (
+    exists (
+      select 1 from public.test_sessions s
+      where s.id = trial_results.session_id and s.user_id = auth.uid()
+    )
+  );
+
+create policy tr_self_insert on public.trial_results
+  for insert with check (
+    exists (
+      select 1 from public.test_sessions s
+      where s.id = trial_results.session_id and s.user_id = auth.uid()
+    )
+  );
+
+create policy tr_teacher_read on public.trial_results
+  for select using (
+    public.is_teacher()
+    and exists (
+      select 1 from public.test_sessions s
+      where s.id = trial_results.session_id and public.is_my_student(s.user_id)
+    )
+  );
+
+create policy tr_admin_all on public.trial_results
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- metrics
+alter table public.metrics enable row level security;
+
+drop policy if exists m_self_read     on public.metrics;
+drop policy if exists m_teacher_read  on public.metrics;
+drop policy if exists m_admin_all     on public.metrics;
+
+create policy m_self_read on public.metrics
+  for select using (auth.uid() = user_id);
+
+create policy m_teacher_read on public.metrics
+  for select using (public.is_teacher() and public.is_my_student(user_id));
+
+create policy m_admin_all on public.metrics
+  for all using (public.is_admin()) with check (public.is_admin());

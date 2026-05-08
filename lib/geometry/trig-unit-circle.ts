@@ -84,62 +84,6 @@ export const TRIG_CIRCLE_QUESTIONS: TrigMainQuestion[] = [
       { id: 'Q2-d', label: 'δ', labelTex: String.raw`\cos\!\left(-\dfrac{4\pi}{3}\right)`, kind: 'project-cos', targetAngle: -(4 * π) / 3 },
     ],
   },
-  {
-    id: 'Q3',
-    title: 'Q3 — Calculer',
-    stemTex: 'Sélectionnez la valeur exacte pour chaque expression (cercle disponible comme support).',
-    competency: 'C1',
-    subs: [
-      {
-        id: 'Q3-a',
-        label: 'A',
-        labelTex: String.raw`\cos\!\left(\dfrac{5\pi}{6}\right)`,
-        kind: 'mcq',
-        choices: [
-          { id: 'a', tex: String.raw`-\dfrac{\sqrt{3}}{2}`, correct: true },
-          { id: 'b', tex: String.raw`\dfrac{\sqrt{3}}{2}`,  correct: false },
-          { id: 'c', tex: String.raw`-\dfrac{1}{2}`,        correct: false },
-          { id: 'd', tex: String.raw`\dfrac{1}{2}`,         correct: false },
-        ],
-      },
-      {
-        id: 'Q3-b',
-        label: 'B',
-        labelTex: String.raw`\sin\!\left(\dfrac{3\pi}{4}\right)`,
-        kind: 'mcq',
-        choices: [
-          { id: 'a', tex: String.raw`\dfrac{\sqrt{2}}{2}`,  correct: true },
-          { id: 'b', tex: String.raw`-\dfrac{\sqrt{2}}{2}`, correct: false },
-          { id: 'c', tex: String.raw`\dfrac{1}{2}`,         correct: false },
-          { id: 'd', tex: String.raw`\dfrac{\sqrt{3}}{2}`,  correct: false },
-        ],
-      },
-      {
-        id: 'Q3-c',
-        label: 'C',
-        labelTex: String.raw`\cos\!\left(-\dfrac{\pi}{3}\right)`,
-        kind: 'mcq',
-        choices: [
-          { id: 'a', tex: String.raw`\dfrac{1}{2}`,         correct: true },
-          { id: 'b', tex: String.raw`-\dfrac{1}{2}`,        correct: false },
-          { id: 'c', tex: String.raw`\dfrac{\sqrt{3}}{2}`,  correct: false },
-          { id: 'd', tex: String.raw`-\dfrac{\sqrt{3}}{2}`, correct: false },
-        ],
-      },
-      {
-        id: 'Q3-d',
-        label: 'D',
-        labelTex: String.raw`\sin\!\left(\dfrac{2\pi}{3}\right)`,
-        kind: 'mcq',
-        choices: [
-          { id: 'a', tex: String.raw`\dfrac{\sqrt{3}}{2}`,  correct: true },
-          { id: 'b', tex: String.raw`-\dfrac{\sqrt{3}}{2}`, correct: false },
-          { id: 'c', tex: String.raw`\dfrac{1}{2}`,         correct: false },
-          { id: 'd', tex: String.raw`\dfrac{\sqrt{2}}{2}`,  correct: false },
-        ],
-      },
-    ],
-  },
 ]
 
 // ─── Validation helpers ─────────────────────────────────────────────────────

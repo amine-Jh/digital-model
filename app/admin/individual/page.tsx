@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { platformDomains } from '@/lib/platform-domains'
+import { platformDomains, geometryCognitionTestIds } from '@/lib/platform-domains'
+import { CAPACITIES_BY_TEST } from '@/lib/geometry/capacity-definitions'
 import { cn } from '@/lib/utils'
 import {
   fetchAdminResultsData,
@@ -12,8 +13,10 @@ import {
   type AdminStudentSummary,
 } from '@/lib/admin-results'
 import { formatCapacityGlyph } from '@/lib/geometry/capacity-definitions'
+import { asciiCompetencyKey } from '@/lib/geometry-mcq'
 
 function color(v: number) {
+  if (v < 0) return 'text-slate-500'
   if (v >= 75) return 'text-green-600'
   if (v >= 50) return 'text-amber-600'
   return 'text-red-500'
@@ -28,6 +31,8 @@ const allTests = Array.from(
     ),
   ).values(),
 )
+
+const geometryTestIdSet = new Set(geometryCognitionTestIds())
 
 export default function IndividualResultsPage() {
   const [students, setStudents] = useState<AdminStudentSummary[]>([])
@@ -157,7 +162,7 @@ export default function IndividualResultsPage() {
                   <div className="grid sm:grid-cols-2 gap-3 text-sm">
                     {allTests.map((t) => {
                       const v = student.testScores[t.testId]
-                      const display = v != null ? v : 0
+                      const display = v != null && v >= 0 ? v : v === -1 ? -1 : 0
                       const cap = student.capacityByTest?.[t.testId]
                       return (
                         <div
@@ -169,7 +174,11 @@ export default function IndividualResultsPage() {
                               {t.name}
                             </span>
                             <span className={cn('shrink-0 font-bold tabular-nums', color(display))}>
-                              {v != null ? `${v}%` : '—'}
+                              {v === -1
+                                ? 'Attente validation'
+                                : v != null
+                                  ? `${v}%`
+                                  : '—'}
                             </span>
                           </div>
                           <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
@@ -180,28 +189,43 @@ export default function IndividualResultsPage() {
                               <p className="font-semibold text-slate-600">Détail par Cₖ</p>
                               {Object.entries(cap.breakdown)
                                 .sort(([a], [b]) => a.localeCompare(b))
-                                .map(([code, br]) => (
-                                  <div
-                                    key={code}
-                                    className="flex justify-between gap-2 border-b border-slate-100 py-0.5 last:border-0"
-                                  >
-                                    <span className="font-mono text-slate-700">
-                                      {formatCapacityGlyph(code)}
-                                    </span>
-                                    <span className="tabular-nums text-slate-800">
-                                      {cap.unit === 'points'
-                                        ? `${br.earned} / ${br.max} pts`
-                                        : `${br.percent ?? (br.max > 0 ? Math.round((br.earned / br.max) * 100) : 0)}%`}
-                                    </span>
-                                  </div>
-                                ))}
+                                .map(([code, br]) => {
+                                  const defs = CAPACITIES_BY_TEST[t.testId]
+                                  const ascii = asciiCompetencyKey(code)
+                                  const label = defs?.find((d) => d.code === ascii)?.label
+                                  const pct =
+                                    br.percent ??
+                                    (br.max > 0 ? Math.round((br.earned / br.max) * 100) : 0)
+                                  return (
+                                    <div
+                                      key={code}
+                                      className="border-b border-slate-100 py-1 last:border-0"
+                                    >
+                                      <div className="flex justify-between gap-2">
+                                        <span className="font-mono text-slate-700">
+                                          {formatCapacityGlyph(code)}
+                                        </span>
+                                        <span className="tabular-nums text-slate-800">
+                                          {cap.unit === 'points'
+                                            ? `${br.earned} / ${br.max} pts`
+                                            : `${pct}%`}
+                                        </span>
+                                      </div>
+                                      {label ? (
+                                        <p className="mt-0.5 text-[10px] leading-snug text-slate-500">
+                                          {label}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  )
+                                })}
                             </div>
-                          ) : (
+                          ) : geometryTestIdSet.has(t.testId) ? (
                             <p className="mt-2 text-[11px] text-slate-400">
-                              Pas de ventilation Cₖ enregistrée (session antérieure ou autre
-                              type de test).
+                              Pas de ventilation Cₖ enregistrée (session antérieure ou autre type de
+                              test).
                             </p>
-                          )}
+                          ) : null}
                         </div>
                       )
                     })}

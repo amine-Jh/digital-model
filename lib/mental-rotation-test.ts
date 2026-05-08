@@ -37,27 +37,34 @@ export interface RotationQuestion {
   correctAnswers: [OptionLetter, OptionLetter]
 }
 
+function rotationImagePath(questionNumber: number): string {
+  if (questionNumber >= 9) return `/rotation/rotation (${questionNumber}).jpg`
+  return `/rotation/Rotation (${questionNumber}).png`
+}
+
 export const rotationQuestions: RotationQuestion[] = Array.from(
   { length: 20 },
-  (_, i) => ({
-    number: i + 1,
-    imagePath: `/rotation/Rotation (${i + 1}).png`,
-    correctAnswers: RAW_KEY[i + 1],
-  })
+  (_, i) => {
+    const n = i + 1
+    return {
+      number: n,
+      imagePath: rotationImagePath(n),
+      correctAnswers: RAW_KEY[n],
+    }
+  },
 )
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
-// +2 → both correct answers selected
-// +1 → exactly one correct answer among selected
-// +0 → no correct answer, or no selection
+// Exactly two selections required in UI. +1 if both match the key, else 0.
 
 export function scoreQuestion(
   selected: OptionLetter[],
-  correct: [OptionLetter, OptionLetter]
-): 0 | 1 | 2 {
+  correct: [OptionLetter, OptionLetter],
+): 0 | 1 {
+  if (selected.length !== 2) return 0
   const correctSet = new Set(correct)
   const hits = selected.filter((s) => correctSet.has(s)).length
-  return hits as 0 | 1 | 2
+  return hits === 2 ? 1 : 0
 }
 
 // ─── Result types ─────────────────────────────────────────────────────────────
@@ -65,14 +72,14 @@ export function scoreQuestion(
 export interface RotationResponse {
   questionNumber: number
   selected: OptionLetter[]
-  score: 0 | 1 | 2         // per-question score
+  score: 0 | 1 // per-question score (+1 both correct, else 0)
   responseTimeMs: number
 }
 
 export interface RotationResult {
   responses: RotationResponse[]
-  totalScore: number        // 0–40  (max 2 pts × 20 questions)
-  maxScore: number          // 40
+  totalScore: number // 0–20
+  maxScore: number // 20
   timeUsedSeconds: number
   completedAt: string
 }
@@ -88,7 +95,7 @@ export function computeRotationResult(
   return {
     responses,
     totalScore: responses.reduce((s, r) => s + r.score, 0),
-    maxScore: 40,
+    maxScore: 20,
     timeUsedSeconds,
     completedAt: new Date().toISOString(),
   }

@@ -87,11 +87,19 @@ export async function POST(request: Request) {
         ? body.completedAt
         : new Date().toISOString()
 
-    const scoreRaw = typeof body.score === 'number' && Number.isFinite(body.score) ? body.score : 0
-    const score = Math.max(0, Math.min(100, Math.round(scoreRaw * 100) / 100))
+    const pendingAdminValidation = Boolean(
+      (body as { pendingAdminValidation?: boolean }).pendingAdminValidation,
+    )
 
-    const correctCount =
-      typeof body.correctCount === 'number' && Number.isFinite(body.correctCount)
+    const scoreRaw =
+      typeof body.score === 'number' && Number.isFinite(body.score) ? body.score : 0
+    const score = pendingAdminValidation
+      ? null
+      : Math.max(0, Math.min(100, Math.round(scoreRaw * 100) / 100))
+
+    const correctCount = pendingAdminValidation
+      ? null
+      : typeof body.correctCount === 'number' && Number.isFinite(body.correctCount)
         ? Math.max(0, Math.round(body.correctCount))
         : 0
     const totalQuestions =
@@ -114,6 +122,7 @@ export async function POST(request: Request) {
       ...(typeof body.metadata === 'object' && body.metadata !== null && !Array.isArray(body.metadata)
         ? body.metadata
         : {}),
+      ...(pendingAdminValidation ? { pendingAdminValidation: true as const } : {}),
     } as Record<string, unknown>
 
     const { data: session, error } = await sb

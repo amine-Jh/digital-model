@@ -10,7 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { listMySessions, listMyStudentsView } from '@/lib/results/results-service'
+import {
+  listMySessions,
+  listMyStudentsView,
+  listSessionsForStudentIds,
+} from '@/lib/results/results-service'
 import { useTestsCatalog } from '@/hooks/use-tests-catalog'
 import { mergeCatalogWithSessions, averageCompletedScore } from '@/lib/student-test-progress'
 import { mergeRosterWithSessions } from '@/lib/teacher-cohort-stats'
@@ -127,9 +131,12 @@ export default function ProfilePage() {
       return
     }
     setTeacherRemoteReady(false)
-    Promise.all([listMyStudentsView(), listMySessions({ limit: 2000 })])
-      .then(([rosterRes, sessRes]) => {
+    ;(async () => {
+      try {
+        const rosterRes = await listMyStudentsView()
         const roster = rosterRes.data ?? []
+        const ids = roster.map((r) => r.user_id)
+        const sessRes = await listSessionsForStudentIds(ids, { limit: 2000 })
         const sessions = sessRes.data ?? []
         const merged = mergeRosterWithSessions(roster, sessions)
         const active = merged.filter((m) => m.completedTests > 0)
@@ -138,9 +145,12 @@ export default function ProfilePage() {
             ? active.reduce((sum, m) => sum + m.averageScore, 0) / active.length
             : null
         setTeacherOverview({ studentCount: roster.length, classAverage: classAvg })
-      })
-      .catch(() => setTeacherOverview({ studentCount: 0, classAverage: null }))
-      .finally(() => setTeacherRemoteReady(true))
+      } catch {
+        setTeacherOverview({ studentCount: 0, classAverage: null })
+      } finally {
+        setTeacherRemoteReady(true)
+      }
+    })()
   }, [user])
 
   if (loading) {

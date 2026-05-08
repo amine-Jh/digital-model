@@ -17,6 +17,11 @@ import {
 import { mockTestQuestions, mockTests } from '@/lib/mock-data'
 import type { Question } from '@/lib/mock-data'
 import type { Json } from '@/lib/types/database'
+import {
+  GEOMETRY_COGNITION_DOMAIN,
+  buildGeometryCapacityBreakdown,
+  isGeometryMcqCorrect,
+} from '@/lib/geometry-mcq'
 
 interface AnswerInput {
   questionId: string
@@ -24,16 +29,38 @@ interface AnswerInput {
   timeSpentMs?: number | null
 }
 
+function parseSelectedLabels(val: string | null): string[] {
+  if (val == null || val === '') return []
+  const t = val.trim()
+  if (t.startsWith('[')) {
+    try {
+      const p = JSON.parse(t) as unknown
+      return Array.isArray(p) ? p.map(String) : []
+    } catch {
+      return []
+    }
+  }
+  return [val]
+}
+
 /** MCQs used for scoring: embedded questions on the test, else shared mock bank. */
 function mcqCatalogForTest(testId: string): Question[] {
   const test = mockTests.find((t) => t.id === testId)
   const embedded =
-    test?.questions?.filter(
-      (q) => q.type === 'mcq' && q.options && q.options.length > 0 && q.correctOptionIndex !== undefined,
-    ) ?? []
+    test?.questions?.filter((q) => {
+      if (q.type !== 'mcq' || !q.options?.length) return false
+      return (
+        q.correctOptionIndex !== undefined ||
+        (q.correctOptionIndices != null && q.correctOptionIndices.length > 0)
+      )
+    }) ?? []
   if (embedded.length > 0) return embedded
   return mockTestQuestions.filter(
-    (q) => q.type === 'mcq' && q.options && q.correctOptionIndex !== undefined,
+    (q) =>
+      q.type === 'mcq' &&
+      Boolean(q.options?.length) &&
+      (q.correctOptionIndex !== undefined ||
+        (q.correctOptionIndices != null && q.correctOptionIndices.length > 0)),
   )
 }
 
@@ -47,18 +74,35 @@ function scoreAnswers(
   perQuestion: { questionId: string; correct: boolean; selected: string | null }[]
 } {
   const mcqWithKey = mcqCatalogForTest(testId)
+  const testMeta = mockTests.find((t) => t.id === testId)
+  const isGeometry = testMeta?.domain === GEOMETRY_COGNITION_DOMAIN
   let correct = 0
   const perQuestion: { questionId: string; correct: boolean; selected: string | null }[] = []
   for (const q of mcqWithKey) {
     const a = answers.find((x) => x.questionId === q.id)
-    if (!a?.selectedValue || !q.options) {
-      perQuestion.push({ questionId: q.id, correct: false, selected: a?.selectedValue ?? null })
+    const labels = parseSelectedLabels(a?.selectedValue ?? null)
+    if (!q.options || labels.length === 0) {
+      perQuestion.push({
+        questionId: q.id,
+        correct: false,
+        selected: a?.selectedValue ?? null,
+      })
       continue
     }
-    const idx = q.options.indexOf(a.selectedValue)
-    const isCorrect = idx === q.correctOptionIndex
+    let isCorrect = false
+    if (isGeometry) {
+      isCorrect = isGeometryMcqCorrect(q, labels)
+    } else {
+      const only = labels[0]
+      const idx = only != null ? q.options.indexOf(only) : -1
+      isCorrect = idx === q.correctOptionIndex
+    }
     if (isCorrect) correct++
-    perQuestion.push({ questionId: q.id, correct: isCorrect, selected: a.selectedValue })
+    perQuestion.push({
+      questionId: q.id,
+      correct: isCorrect,
+      selected: a?.selectedValue ?? null,
+    })
   }
   const total = mcqWithKey.length
   const scorePercent = total === 0 ? null : Math.round((correct / total) * 100)
@@ -83,6 +127,15 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
     const { scorePercent, correctCount, total, perQuestion } = scoreAnswers(testId, answers)
+    const testRow = mockTests.find((t) => t.id === testId)
+    const embeddedMcq =
+      testRow?.questions?.filter(
+        (q) => q.type === 'mcq' && q.options && q.options.length > 0,
+      ) ?? []
+    const capacityBreakdown =
+      testRow?.domain === GEOMETRY_COGNITION_DOMAIN && embeddedMcq.length > 0
+        ? buildGeometryCapacityBreakdown(testId, embeddedMcq, perQuestion)
+        : undefined
 
     const fk = await ensureTestSessionFkPrereqs(sb, user, testId)
     if (!fk.ok) {
@@ -100,7 +153,12 @@ export async function POST(request: Request) {
         score: scorePercent,
         correct_count: correctCount,
         total_questions: total,
-        metadata: { rawAnswers: answers } as unknown as Json,
+        metadata: {
+          rawAnswers: answers,
+          ...(capacityBreakdown
+            ? { capacityBreakdown, breakdownUnit: 'fraction' as const }
+            : {}),
+        } as unknown as Json,
       })
       .select('id, score, correct_count, total_questions, started_at, completed_at')
       .single()
@@ -124,7 +182,11 @@ export async function POST(request: Request) {
           session_id: session.id,
           question_index: i,
           question_id: p.questionId,
-          selected: (p.selected !== null ? [p.selected] : []) as Json,
+          selected: (() => {
+            if (p.selected == null) return [] as unknown as Json
+            const labels = parseSelectedLabels(p.selected)
+            return (labels.length > 0 ? labels : [p.selected]) as unknown as Json
+          })(),
           free_text: null,
           correct: p.correct,
           score: p.correct ? 1 : 0,

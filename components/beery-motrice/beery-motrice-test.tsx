@@ -19,6 +19,7 @@ import {
   BeeryMotriceSession,
   clearCurrentSessionId,
 } from '@/lib/beery-motrice'
+import { submitCompletedTestSession } from '@/lib/results/submit-completed-session-api'
 import { TestIntroSection } from '@/components/assessment/test-intro-section'
 
 const BEERY_VMI_TEST_ID_LOCAL = 'test-visuo-motor'
@@ -101,6 +102,24 @@ export function BeeryMotriceTest() {
     if (isLast) {
       submitSession(session.id)
       clearCurrentSessionId()
+      const completed = getSession(session.id)
+      if (user?.userId && completed) {
+        void submitCompletedTestSession({
+          testId: BEERY_VMI_TEST_ID_LOCAL,
+          startedAt: completed.startedAt,
+          completedAt: completed.completedAt ?? new Date().toISOString(),
+          totalMs: null,
+          score: 0,
+          correctCount: 0,
+          totalQuestions: BEERY_MOTRICE_ITEM_COUNT,
+          trials: [],
+          pendingAdminValidation: true,
+          metadata: {
+            source: 'beery-motrice',
+            localSessionId: completed.id,
+          },
+        })
+      }
       setSubmitted(true)
       return
     }

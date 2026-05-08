@@ -109,10 +109,20 @@ export interface CohortRow {
 
 export async function getCohortSummary(): Promise<CohortRow[]> {
   const sb = await getSupabaseServer()
-  // Pull roster
-  const { data: students, error: rosterErr } = await sb
-    .from('my_students')
-    .select('user_id, full_name, email')
+  const {
+    data: { user },
+  } = await sb.auth.getUser()
+  if (!user) return []
+
+  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle()
+
+  // Pull roster — teachers: only rows assigned to this account (defense in depth)
+  let rosterQuery = sb.from('my_students').select('user_id, full_name, email')
+  if (profile?.role === 'teacher') {
+    rosterQuery = rosterQuery.eq('teacher_id', user.id)
+  }
+
+  const { data: students, error: rosterErr } = await rosterQuery
   if (rosterErr || !students) {
     console.error('[analytics] roster failed:', rosterErr?.message)
     return []

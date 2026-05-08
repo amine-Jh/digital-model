@@ -91,6 +91,8 @@ function rowToUiStatus(row: SessionRow): 'upcoming' | 'in-progress' | 'completed
  */
 export function resolveSessionScorePercent(row: SessionRow): number | null {
   if (row.status !== 'completed') return null
+  const meta = row.metadata as Record<string, unknown> | null | undefined
+  if (meta && meta.pendingAdminValidation === true && row.score == null) return null
   if (row.score != null) {
     const n = Number(row.score as number | string)
     if (Number.isFinite(n)) return Math.round(n)

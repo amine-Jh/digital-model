@@ -13,7 +13,7 @@ import { Brain, Calculator, Eye, GitBranch, Box, Sparkles, BarChart3, ArrowRight
 const domainIcons: Record<string, React.ReactNode> = {
   'attentional-capacities': <Sparkles className="w-10 h-10 text-primary" />,
   'reasoning-capacities': <GitBranch className="w-10 h-10 text-primary" />,
-  'spatial-reasoning': <Box className="w-10 h-10 text-primary" />,
+  'cognitive-capacity': <Box className="w-10 h-10 text-primary" />,
   'visual-processing': <Eye className="w-10 h-10 text-primary" />,
   'memory-capacities': <Brain className="w-10 h-10 text-primary" />,
   'executive-functions': <BarChart3 className="w-10 h-10 text-primary" />,

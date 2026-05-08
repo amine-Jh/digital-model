@@ -45,7 +45,14 @@ export function mergeDbCatalogOntoMock(dbTests: Test[]): Test[] {
     }
   })
   const mockIds = new Set(mockTests.map((t) => t.id))
-  const extras = dbTests.filter((t) => !mockIds.has(t.id))
+  /** Legacy catalogue ids that duplicate canonical `mockTests` rows — avoid double listings in UI. */
+  const legacyDuplicateIds = new Set([
+    'test-symetrie-axiale',
+    'test-symetrie-centrale',
+    'test-droite-plan',
+    'test-trig-unit-circle',
+  ])
+  const extras = dbTests.filter((t) => !mockIds.has(t.id) && !legacyDuplicateIds.has(t.id))
   return [...merged, ...extras]
 }
 
