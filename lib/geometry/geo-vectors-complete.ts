@@ -1,12 +1,12 @@
 /**
- * Vecteurs & Translation — Partie I : Questions du cours
- * Cognitive Assessment Test
- * 9 Questions (1 auto-évaluation + 8 questions de cours)
+ * Vecteurs & Translation — leçon « Cognition et apprentissage de la géométrie »
  *
- * Capacités C₁–C₃ (locales à cette leçon — voir `CAPACITIES_BY_TEST`) :
- * C₁ distance / perpendicularité (produit scalaire, notions de base)
- * C₂ utilisation du produit scalaire / outil vectoriel en problèmes
- * C₃ Cauchy (Chasles), médiane, colinéarité structurante
+ * Parties : cours (Q1–Q7) + auto-évaluation · construction (Q8–Q18) +
+ * auto-évaluation démonstration · raisonnement (Q19–Q21).
+ * Capacités C1–C5 : voir `CAPACITIES_BY_TEST['test-geo-vectors-complete']`.
+ * Les auto-évaluations et questions ouvertes (placement, coefficients) ne sont
+ * pas comptées dans le score automatique (voir exclusions).
+ *
  */
 
 export const VECTORS_TEST_ID = 'test-geo-vectors-complete'
@@ -28,7 +28,7 @@ export interface VectorsQuestion {
   /** When set, the question collects numeric collinearity coefficients
    *  using inline inputs (not auto-graded). */
   fillIn?: { fields: { label: string; expected?: string }[] }
-  part: 'autoeval' | 'course' | 'autoeval2' | 'construction'
+  part: 'autoeval' | 'course' | 'autoeval2' | 'construction' | 'autoeval3' | 'reasoning'
   correction?: string
 }
 
@@ -92,7 +92,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q1',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question: 'Soient deux vecteurs colinéaires \\( \\vec{FG} \\) et \\( \\vec{AB} \\). Alors :',
     options: [
       'Les droites (FG) et (AB) sont parallèles, \\( FG = AB \\) et les vecteurs ont le même sens',
@@ -107,7 +107,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q2',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question: '\\( \\vec{AB} - \\vec{BG} = \\;? \\)',
     options: [
       '\\( \\vec{AG} \\)',
@@ -122,7 +122,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q3',
-    competencies: ['C3'],
+    competencies: ['C2'],
     question: 'Soit \\( I \\) le milieu du segment \\( [AB] \\). Alors :',
     options: [
       '\\( \\vec{AI} + \\vec{IB} = \\vec{0} \\)',
@@ -137,7 +137,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q4',
-    competencies: ['C1'],
+    competencies: ['C2', 'C4'],
     question: 'Une translation conserve :',
     options: [
       'L\'alignement des points',
@@ -217,7 +217,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q9',
-    competencies: ['C2'],
+    competencies: ['C1'],
     question:
       'Placer le point \\( I \\) tel que : \\( \\vec{AI} = \\dfrac{2}{5}\\vec{AB} \\)',
     options: [],
@@ -231,7 +231,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q10',
-    competencies: ['C2'],
+    competencies: ['C1'],
     question:
       'Placer les points \\( M \\) et \\( Q \\) tels que : \\( \\vec{AM} = \\vec{AB} + \\vec{AD} \\) et \\( \\vec{BQ} = \\vec{BG} + \\vec{BC\'} \\)',
     options: [],
@@ -245,7 +245,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q11',
-    competencies: ['C2'],
+    competencies: ['C1'],
     question:
       'Placer les points \\( N \\) et \\( P \\) tels que : \\( \\vec{AN} = \\vec{BH} \\) et \\( \\vec{DE} = -\\vec{C\'P} \\)',
     options: [],
@@ -259,7 +259,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q12',
-    competencies: ['C2'],
+    competencies: ['C1'],
     question: 'Donner les parallélogrammes présents dans la figure :',
     options: ['ABDC', 'DEFF\'', 'BC\'GH', 'ABHG'],
     correctAnswer: [0, 2, 3],
@@ -271,7 +271,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q13',
-    competencies: ['C2'],
+    competencies: ['C1', 'C3'],
     question: 'Compléter : \\( \\vec{AB} + \\vec{AC} = \\;? \\)',
     options: [
       '\\( \\vec{AC\'} \\)',
@@ -287,7 +287,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q14',
-    competencies: ['C3'],
+    competencies: ['C2', 'C3'],
     question:
       'En utilisant la relation de Chasles : \\( \\vec{BG} + \\vec{AB} + \\vec{GH} = \\;? \\)',
     options: [
@@ -304,7 +304,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q15',
-    competencies: ['C3'],
+    competencies: ['C1'],
     question: 'Si \\( N \\) est le milieu de \\( [AG] \\) alors (cocher la bonne réponse) :',
     options: [
       '\\( \\vec{AN} + \\vec{NG} = \\vec{0} \\)',
@@ -319,7 +319,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q16',
-    competencies: ['C2'],
+    competencies: ['C4'],
     question:
       'Image du point \\( E \\) par la translation de vecteur \\( \\vec{C\'H} \\) :',
     options: ['\\( D \\)', '\\( F\' \\)', '\\( E \\)', '\\( C \\)'],
@@ -331,7 +331,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q17',
-    competencies: ['C2'],
+    competencies: ['C4'],
     question:
       'Image du point \\( C \\) par la translation de vecteur \\( \\vec{AB} \\) :',
     options: ['\\( C\' \\)', '\\( D \\)', '\\( E \\)', '\\( A \\)'],
@@ -342,7 +342,7 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
   },
   {
     id: 'Q18',
-    competencies: ['C3'],
+    competencies: ['C1'],
     question:
       'Compléter par les coefficients de colinéarité (voir l\'image « sens des vecteurs ») :',
     options: [],
@@ -358,6 +358,65 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     },
     part: 'construction',
     correction: 'Réponses attendues : -3, 4/3, 5/3',
+  },
+  {
+    id: 'AutoEval-3',
+    competencies: [],
+    question:
+      'La démonstration dans la leçon des vecteurs et translation est :',
+    options: ['Très facile', 'Facile', 'Difficile', 'Très difficile'],
+    correctAnswer: null,
+    requiresImage: false,
+    part: 'autoeval3',
+    correction: 'Auto-évaluation',
+  },
+  {
+    id: 'Q19',
+    competencies: ['C1', 'C5'],
+    question:
+      'Si \\( \\overrightarrow{AB} + \\overrightarrow{AC} = \\overrightarrow{AD} \\) alors :',
+    options: [
+      '\\( ABDC \\) est un parallélogramme',
+      '\\( B \\) est l’image de \\( A \\) par la translation qui transforme \\( C \\) en \\( D \\)',
+      '\\( ABCD \\) est un rectangle',
+      'Je ne sais pas',
+    ],
+    correctAnswer: [0, 1],
+    requiresImage: false,
+    part: 'reasoning',
+    correction: 'Réponses correctes : A, B',
+  },
+  {
+    id: 'Q20',
+    competencies: ['C3'],
+    question:
+      'Si \\( \\overrightarrow{AB} = \\overrightarrow{FG} \\) et \\( \\overrightarrow{AC} = 2\\overrightarrow{FG} \\) alors :',
+    options: [
+      'Les points \\( A \\), \\( B \\) et \\( C \\) sont alignés',
+      '\\( \\overrightarrow{AC} = 2\\overrightarrow{AB} \\)',
+      'Les vecteurs \\( \\overrightarrow{AB} \\) et \\( \\overrightarrow{FG} \\) sont colinéaires',
+      'Je ne sais pas',
+    ],
+    correctAnswer: [0, 1, 2],
+    requiresImage: false,
+    part: 'reasoning',
+    correction: 'Réponses correctes : A, B, C',
+  },
+  {
+    id: 'Q21',
+    competencies: ['C3'],
+    question:
+      'Si \\( \\overrightarrow{AF} = 2\\overrightarrow{AG} + 4\\overrightarrow{AE} \\) et \\( \\overrightarrow{AC} = \\overrightarrow{AG} + 2\\overrightarrow{AE} \\) alors :',
+    options: [
+      '\\( \\overrightarrow{AC} = 2\\overrightarrow{AF} \\)',
+      '\\( \\overrightarrow{AF} = 2\\overrightarrow{AC} \\)',
+      'Les points \\( A \\), \\( F \\) et \\( C \\) sont alignés',
+      'Je ne sais pas',
+    ],
+    correctAnswer: [1, 2],
+    requiresImage: false,
+    part: 'reasoning',
+    correction: 'Réponses correctes : B, C',
   },
 ]
 

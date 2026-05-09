@@ -7,11 +7,11 @@
  *   - Manuels scolaires marocains (MENFP)
  *
  * Compétences :
- *   C1 — Reconnaître les propriétés et figures liées à la symétrie centrale (Q1 → Q13)
+ *   C1 — Reconnaître les propriétés et figures liées à la symétrie centrale (Q2 → Q13)
  *   C2 — Utiliser la symétrie centrale dans la résolution de problèmes (Q14 → Q17)
  *
  * Barème :
- *   Q1               : 0 pt (diagnostic)
+ *   Auto-évaluations (AE1, AE2, AE3) : 0 pt — non comptées dans le score ni les moyennes
  *   Q2 → Q13  (C1)   : 1 pt chacune  → /12
  *   Q14 → Q17 (C2)   : 2 pts chacune → /8
  *   Total : 20 pts
@@ -48,6 +48,8 @@ export interface SymCentraleQuestion {
   /** Score weight (0 diagnostic, 1 for C1, 2 for C2). */
   points: number
   isDiagnostic?: boolean
+  /** Auto-évaluations : jamais comptées dans le score ni les moyennes. */
+  isAutoeval?: boolean
 }
 
 export interface SymCentraleTrialResult {
@@ -80,10 +82,9 @@ export type SymCentraleLevel = 'faible' | 'moyen' | 'bon' | 'excellent'
 // ─── Questions ──────────────────────────────────────────────────────────────
 
 export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
-  // Q1 — Diagnostic (0 pt)
   {
-    id: 'Q1',
-    number: 1,
+    id: 'AE1',
+    number: -1,
     competency: null,
     kind: 'mcq',
     question:
@@ -96,7 +97,7 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     ],
     correctAnswer: null,
     points: 0,
-    isDiagnostic: true,
+    isAutoeval: true,
   },
 
   // ─── C1 : Reconnaître (Q2 → Q13) — 1 pt ───────────────────────────────────
@@ -125,7 +126,7 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     options: [
       'Les points \\( I,\\,M,\\,M\' \\) sont alignés',
       'Le point \\( I \\) est le milieu de \\( [MM\'] \\)',
-      'Le segment \\( [MM\'] \\) est globalement invariant par cette symétrie',
+      'Le segment \\( [MM\'] \\) est invariant par cette symétrie',
       'Je ne sais pas',
     ],
     correctAnswer: [0, 1, 2],
@@ -137,11 +138,11 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     competency: 'C1',
     kind: 'multi',
     question:
-      'Si \\( A \\leftrightarrow E \\) et \\( B \\leftrightarrow F \\) par une symétrie centrale, alors :',
+      'Si \\( E \\) et \\( F \\) sont les symétriques respectifs des points \\( A \\) et \\( B \\) par rapport à \\( O \\), alors :',
     options: [
-      '\\( [AB] \\rightarrow [EF] \\)',
+      'Le segment \\( [AB] \\) est le symétrique du segment \\( [EF] \\) par rapport à \\( O \\)',
       '\\( AB = EF \\)',
-      '\\( ABFE \\) peut former un parallélogramme',
+      'Le quadrilatère \\( ABEF \\) peut être un parallélogramme',
       'Je ne sais pas',
     ],
     correctAnswer: [0, 1, 2],
@@ -180,6 +181,19 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     points: 1,
   },
 
+  {
+    id: 'AE2',
+    number: -2,
+    competency: null,
+    kind: 'mcq',
+    question:
+      'Rencontres-tu des difficultés dans la construction des symétriques de points, segments ou figures par rapport à un centre ?',
+    options: ['Oui', 'Non'],
+    correctAnswer: null,
+    points: 0,
+    isAutoeval: true,
+  },
+
   // ─── Q7 → Q13 : figure commune avec centre I ─────────────────────────────
   {
     id: 'Q7',
@@ -189,9 +203,9 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     question:
       'Sur la figure ci-dessous (centre \\( I \\)), parmi les affirmations suivantes, laquelle est vraie ?',
     options: [
-      'Le symétrique de \\( A \\) par rapport à \\( I \\) est \\( F \\)',
-      'Le symétrique de \\( A \\) par rapport à \\( I \\) est \\( C \\)',
-      'Le symétrique de \\( G \\) par rapport à \\( I \\) est \\( H \\) (faux)',
+      'Le symétrique du point \\( A \\) est le point \\( F \\) — faux',
+      'Le symétrique du point \\( A \\) est le point \\( C \\) — vrai',
+      'Le symétrique du point \\( G \\) est le point \\( H \\) — faux',
       'Aucune réponse',
     ],
     correctAnswer: 1,
@@ -230,12 +244,12 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     question:
       'Sur la figure ci-dessous, le symétrique de \\( \\widehat{BAD} \\) par rapport à \\( I \\) est :',
     options: [
-      '\\( \\widehat{BAD} \\)',
       '\\( \\widehat{BCD} \\)',
+      '\\( \\widehat{BAD} \\)',
       '\\( \\widehat{ADC} \\)',
       'Aucune réponse',
     ],
-    correctAnswer: 1,
+    correctAnswer: 0,
     figure: 'shared-i',
     points: 1,
   },
@@ -281,6 +295,19 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     points: 1,
   },
 
+  {
+    id: 'AE3',
+    number: -3,
+    competency: null,
+    kind: 'mcq',
+    question:
+      'La démonstration dans la leçon de symétrie centrale est, pour toi :',
+    options: ['Très facile', 'Facile', 'Difficile', 'Très difficile'],
+    correctAnswer: null,
+    points: 0,
+    isAutoeval: true,
+  },
+
   // ─── C2 : Résolution de problèmes (Q14 → Q17) — 2 pts ─────────────────────
   {
     id: 'Q14',
@@ -290,7 +317,7 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     question:
       'Si \\( A \\) et \\( B \\) sont les symétriques respectifs de \\( M \\) et \\( N \\) par rapport à un même centre, cocher les affirmations correctes :',
     options: [
-      '\\( ABNM \\) est un parallélogramme',
+      '\\( ABMN \\) est un parallélogramme',
       'Les diagonales \\( [AM] \\) et \\( [BN] \\) se coupent en leur milieu',
       '\\( AN = AM \\)',
       'Je ne sais pas',
@@ -306,15 +333,11 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     question:
       'Dans le rectangle \\( ABCD \\) de centre \\( O \\), \\( I \\) milieu de \\( [AB] \\) et \\( J \\) milieu de \\( [CD] \\). Cocher les affirmations correctes :',
     options: [
-      '\\( I \\leftrightarrow J \\) par la symétrie de centre \\( O \\)',
-      '\\( \\widehat{AOB} \\leftrightarrow \\widehat{DOC} \\) par la symétrie de centre \\( O \\)',
-      '\\( [AB] \\leftrightarrow [CD] \\) par la symétrie de centre \\( O \\)',
+      '\\( I \\) est le symétrique de \\( J \\) par rapport à \\( O \\)',
+      '\\( \\widehat{AOB} \\) est le symétrique de \\( \\widehat{DOC} \\) par rapport à \\( O \\)',
+      '\\( [AB] \\) est le symétrique de \\( [CD] \\) par rapport à \\( I \\)',
       'Je ne sais pas',
     ],
-    // [AB] et [CD] sont parallèles mais NON symétriques par rapport à O
-    // (la symétrie envoie [AB] sur [CD] retourné — segment-image, mais
-    // le segment [CD] orienté ne coïncide pas comme paire ordonnée).
-    // D'après l'énoncé : ✔ I↔J, ✔ AOB↔DOC, ✗ [AB]↔[CD].
     correctAnswer: [0, 1],
     points: 2,
   },
@@ -325,7 +348,7 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     kind: 'image-choice',
     question:
       'Soit \\( ABC \\) un triangle équilatéral tel que \\( AB = 6\\,\\mathrm{cm} \\). Soient \\( E \\) le milieu de \\( [AC] \\), \\( G \\) le milieu de \\( [AB] \\), \\( K \\) le milieu de \\( [BC] \\). On note \\( B\' \\) le symétrique de \\( B \\) par rapport à \\( E \\), \\( A\' \\) le symétrique de \\( A \\) par rapport à \\( K \\), et \\( C\' \\) le symétrique de \\( C \\) par rapport à \\( G \\). Choisir la figure qui représente correctement la construction.',
-    options: ['Figure 1', 'Figure 2'],
+    options: ['Symétrique 1', 'Symétrique 2'],
     optionImages: [
       '/images/geometry/symetrie-centrale/q16-option-1.png',
       '/images/geometry/symetrie-centrale/q16-option-2.png',

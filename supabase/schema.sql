@@ -1,8 +1,8 @@
 -- =============================================================================
 -- CogniTest — Supabase schema
 -- =============================================================================
--- Full single-file bootstrap (schema + RLS): ../migrations/0001_baseline.sql
--- Migrations folder guide: ../migrations/README.md
+-- Versioned migrations (canonical): supabase/migrations/README.md
+-- Merged bootstrap (schema + RLS):     supabase/migrations/0001_baseline.sql
 --
 -- Split apply on Supabase (SQL Editor):
 --   1. paste this file, run it

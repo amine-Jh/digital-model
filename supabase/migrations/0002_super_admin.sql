@@ -1,8 +1,10 @@
 -- =============================================================================
--- Super admin + locked admin self-registration
--- Run once in Supabase SQL Editor AFTER schema.sql / policies.sql.
+-- Migration 0002 — Super admin + locked admin self-registration
+-- CogniTest: supabase/migrations/ (run in order; see README.md)
+--
+-- Run after 0001_baseline.sql (or legacy schema.sql + policies.sql).
 -- If you use établissements (`schools`) and `profiles.school_id`, also run
--- `migration_schools.sql` so `handle_new_user` stores teacher school metadata.
+-- 0003_schools_teacher_affiliation.sql so `handle_new_user` stores teacher school metadata.
 --
 -- 1) Adds enum value `super_admin`.
 -- 2) `is_admin()` treats both `admin` and `super_admin` as platform admins (RLS).

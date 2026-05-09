@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Brain, ClipboardList, FileText, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/components/ui/use-mobile'
+import type { UserRole } from '@/lib/auth-types'
 
 interface MobileNavItem {
   icon: React.ElementType
@@ -21,15 +22,16 @@ const studentNavItems: MobileNavItem[] = [
 ]
 
 interface MobileNavProps {
-  userRole: 'student' | 'teacher' | 'admin'
+  userRole: UserRole
 }
 
 export function MobileNav({ userRole }: MobileNavProps) {
   const isMobile = useIsMobile()
   const pathname = usePathname()
 
-  // Only show on mobile, only for students
-  if (!isMobile || userRole !== 'student') return null
+  // Only show on mobile, only for students (treat super_admin like student here)
+  const showStudentBar = userRole === 'student' || userRole === 'super_admin'
+  if (!isMobile || !showStudentBar) return null
 
   return (
     <nav className="mobile-safe-bottom fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border flex h-16 items-stretch">

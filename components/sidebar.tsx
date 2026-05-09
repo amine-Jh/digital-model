@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/components/ui/use-mobile'
 import { useAuth } from '@/lib/auth-context'
+import type { UserRole } from '@/lib/auth-types'
 
 interface NavItem {
   icon: React.ReactNode
@@ -40,7 +41,7 @@ const navItems: NavItem[] = [
 
 interface SidebarProps {
   /** When omitted, uses the signed-in user from `useAuth()`. */
-  userRole?: 'student' | 'teacher' | 'admin'
+  userRole?: UserRole
   /** When omitted, uses `displayName` or email from `useAuth()`. */
   userName?: string
 }
@@ -52,7 +53,10 @@ export function Sidebar({ userRole: userRoleProp, userName: userNameProp }: Side
   const isMobile = useIsMobile()
   const { user, logout } = useAuth()
 
-  const userRole = userRoleProp ?? user?.role ?? 'student'
+  const rawRole = userRoleProp ?? user?.role ?? 'student'
+  /** `super_admin` uses the same student nav entries when this shared sidebar is shown. */
+  const userRole: 'student' | 'teacher' | 'admin' =
+    rawRole === 'super_admin' ? 'student' : rawRole
   const userName =
     userNameProp ??
     (user?.displayName?.trim() ? user.displayName.trim() : null) ??

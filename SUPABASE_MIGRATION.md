@@ -27,6 +27,7 @@ just need to wire them up to a real Supabase project.
 │   • Auth (email/password, optional OAuth)                              │
 │   • Postgres   ── tables in supabase/schema.sql                        │
 │   • RLS        ── policies in supabase/policies.sql                    │
+│   • Migrations ── versioned DDL in supabase/migrations/ (see README)   │
 │   • Storage    ── (optional) test images                               │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -48,9 +49,11 @@ Core principles:
 
 1. **Create the project.** [supabase.com](https://supabase.com) → New project.
    Pick the region closest to your users.
-2. **Apply the schema.** SQL Editor → New query → paste `supabase/schema.sql`
-   → Run.
-3. **Apply RLS.** Same flow with `supabase/policies.sql`.
+2. **Apply migrations (recommended).** Open `supabase/migrations/README.md`,
+   then in SQL Editor run **`0001_baseline.sql`**, then **`0002_` … `0005_`**
+   in numeric order as needed (each file header states dependencies).
+3. **Alternative (split files).** Paste `supabase/schema.sql` → Run, then
+   `supabase/policies.sql` → Run (kept in sync with the baseline for editing).
 4. **Seed the catalogue.** Same flow with `supabase/seed.sql`.
 5. **Auth settings.** Authentication → Settings:
    * Disable confirmation emails for local dev (re-enable in prod).
@@ -78,6 +81,7 @@ Files already in the repo:
 | `lib/supabase/middleware.ts`        | Session refresh + route guard helper (`updateSupabaseSession`) |
 | `proxy.ts`                          | Wires the helper to the Next.js **proxy** pipeline       |
 | `lib/types/database.ts`             | DB types — regenerate with the Supabase CLI when ready   |
+| `supabase/migrations/README.md`     | Versioned DDL: run `0001_…` then incremental `NNNN_…`    |
 | `lib/auth-context.tsx`              | Auth context, now backed by `signInWithPassword`         |
 | `lib/results/results-service.ts`    | `startSession()` / `finishSession()` / `listMySessions()`|
 | `lib/analytics/queries.ts`          | Server-side analytics fetchers                           |

@@ -55,6 +55,7 @@ export function ClickableVectorsPlane({
   }
 
   const handleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (labels.length === 0) return
     const pt = cursorFromEvent(e)
     if (!pt) return
 

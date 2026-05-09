@@ -1,10 +1,13 @@
 -- =============================================================================
--- Template for incremental migrations
+-- Template for incremental migrations (CogniTest)
+-- Location: supabase/migrations/
 -- =============================================================================
--- 1. Copy this file to:  0002_meaningful_name.sql  (next free number).
+-- 1. Copy this file to the next free name, e.g.  0006_add_foo_column.sql
+--    (zero-padded number + underscore + short_description.sql).
 -- 2. Replace the placeholder below with real DDL/DML.
--- 3. Prefer idempotent patterns for team sanity.
--- 4. Run after 0001_baseline.sql (and any prior NNNN_*.sql) on each environment.
+-- 3. Prefer idempotent patterns (IF NOT EXISTS, DROP POLICY IF EXISTS, …).
+-- 4. Run after 0001_baseline.sql and all lower-numbered migrations on each environment.
+--    See supabase/migrations/README.md.
 -- =============================================================================
 
 -- Example: add a nullable column

@@ -240,7 +240,9 @@ export default function StudentDashboard() {
   return (
     <div className="bg-background min-h-screen">
       <Sidebar userRole={user.role} />
-      {user.role === 'student' && <MobileNav userRole="student" />}
+      {(user.role === 'student' || user.role === 'super_admin') && (
+        <MobileNav userRole={user.role} />
+      )}
 
       <div className={cn('transition-all duration-200', isMobile ? 'ml-0' : 'ml-64')}>
         <Header title="Tableau de bord" subtitle="Suivi de votre progression cognitive" />

@@ -1,5 +1,9 @@
--- Schools + teacher affiliation. Run in Supabase SQL Editor on existing projects.
--- Order: run after schema/policies (and after migration_super_admin.sql if used).
+-- =============================================================================
+-- Migration 0003 — Schools + teacher affiliation
+-- CogniTest: supabase/migrations/ (run in order; see README.md)
+--
+-- Run after 0001_baseline.sql and 0002_super_admin.sql (or equivalent).
+-- Idempotent: safe on DBs that already have schools from 0001.
 
 -- 1) Table schools
 create table if not exists public.schools (

@@ -1,5 +1,9 @@
--- Geometry domain — normalized part & capacity scores (optional mirror of
--- test_sessions.metadata.geometryAnalytics). Apply after schema.sql + policies.sql.
+-- =============================================================================
+-- Migration 0005 — Geometry session part & capacity score tables
+-- CogniTest: supabase/migrations/ (run in order; see README.md)
+--
+-- Normalized mirror of test_sessions.metadata.geometryAnalytics.
+-- Requires public.test_sessions (0001 or schema.sql + policies.sql).
 
 -- -----------------------------------------------------------------------------
 -- geometry_session_part_scores

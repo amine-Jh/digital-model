@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import KaTeX from 'katex'
 import 'katex/dist/katex.min.css'
@@ -25,8 +25,19 @@ import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
 import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
+import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-scoring-exclusions'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
+
+function isVectorsScorableIndex(i: number): boolean {
+  const q = VECTORS_QUESTIONS[i]
+  if (!q) return false
+  if (q.correctAnswer === null) return false
+  return !isExcludedFromGeometryScoreAndAverage({
+    ...q,
+    question: q.question,
+  })
+}
 
 function arrayEquals(a: number[], b: number[]) {
   if (a.length !== b.length) return false
@@ -46,7 +57,9 @@ export function VectorsQuizTest() {
   const [startedAt, setStartedAt] = useState<number>(0)
   const trialStart = useRef(0)
 
-  const question = VECTORS_QUESTIONS[current]
+  const maxIndex = Math.max(0, VECTORS_QUESTIONS.length - 1)
+  const safeCurrent = Math.min(Math.max(0, current), maxIndex)
+  const question = VECTORS_QUESTIONS[safeCurrent]
   const isMulti =
     Array.isArray(question?.correctAnswer) &&
     (question.correctAnswer as number[]).length > 1
@@ -58,7 +71,11 @@ export function VectorsQuizTest() {
   }
 
   const submit = useCallback(() => {
-    const q = VECTORS_QUESTIONS[current]
+    const maxIx = Math.max(0, VECTORS_QUESTIONS.length - 1)
+    const idx = Math.min(Math.max(0, current), maxIx)
+    const q = VECTORS_QUESTIONS[idx]
+    if (!q) return
+
     const isFree = Boolean(q.pointPlacement || q.fillIn)
 
     if (!isFree && selectedList.length === 0) return
@@ -72,7 +89,7 @@ export function VectorsQuizTest() {
         })
 
     const trial: VectorsTrialResult = {
-      index: current,
+      index: idx,
       questionId: q.id,
       selected: selectedList[0] ?? -1,
       selectedList: [...selectedList],
@@ -85,7 +102,7 @@ export function VectorsQuizTest() {
     setSelectedList([])
     setFreeText('')
 
-    if (current + 1 >= VECTORS_QUESTIONS.length) {
+    if (idx + 1 >= VECTORS_QUESTIONS.length) {
       setPhase('done')
     } else {
       setCurrent((n) => n + 1)
@@ -96,11 +113,14 @@ export function VectorsQuizTest() {
   }, [current, selectedList, freeText])
 
   useEffect(() => {
+    if (phase !== 'running') return
+    const hi = Math.max(0, VECTORS_QUESTIONS.length - 1)
+    if (current > hi) setCurrent(hi)
+  }, [phase, current])
+
+  useEffect(() => {
     if (phase === 'done' && trials.length > 0) {
-      const scorable = trials.filter((t) => {
-        const q = VECTORS_QUESTIONS[t.index]
-        return q.correctAnswer !== null && !q.pointPlacement && !q.fillIn
-      })
+      const scorable = trials.filter((t) => isVectorsScorableIndex(t.index))
       const correct = scorable.filter((t) => t.correct).length
       const r: VectorsResult = {
         id: `vec-${Date.now()}`,
@@ -141,12 +161,7 @@ export function VectorsQuizTest() {
               score: t.score ?? (t.correct ? 1 : 0),
               correct: t.correct,
             })),
-            isScorableIndex: (i) => {
-              const q = VECTORS_QUESTIONS[i]
-              return (
-                q?.correctAnswer !== null && !q.pointPlacement && !q.fillIn
-              )
-            },
+            isScorableIndex: isVectorsScorableIndex,
           })
           const geometryAnalytics = buildGeometryAnalyticsReport({
             testId: VECTORS_TEST_ID,
@@ -157,12 +172,7 @@ export function VectorsQuizTest() {
               score: t.score ?? (t.correct ? 1 : 0),
               correct: t.correct,
             })),
-            isScorableIndex: (i) => {
-              const q = VECTORS_QUESTIONS[i]
-              return Boolean(
-                q?.correctAnswer !== null && !q.pointPlacement && !q.fillIn,
-              )
-            },
+            isScorableIndex: isVectorsScorableIndex,
             scoringMode: 'fraction',
           })
           return {
@@ -205,9 +215,20 @@ export function VectorsQuizTest() {
     return <Results trials={trials} onExit={() => router.push('/dashboard')} />
   }
 
+  if (!question) {
+    return (
+      <main className="container mx-auto max-w-2xl py-16 text-center text-sm text-muted-foreground">
+        <p>Chargement du questionnaire…</p>
+        <Button className="mt-4" onClick={() => router.push('/dashboard')}>
+          Retour au tableau de bord
+        </Button>
+      </main>
+    )
+  }
+
   return (
     <TrialView
-      index={current}
+      index={safeCurrent}
       total={VECTORS_QUESTIONS.length}
       question={question}
       selectedList={selectedList}
@@ -230,7 +251,7 @@ function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void })
         <div className="mb-4 flex items-center gap-2 text-sm font-medium text-blue-600">
           <BarChart3 className="h-4 w-4" /> Vecteurs &amp; Translation
         </div>
-        <h1 className="mb-3 text-3xl font-bold">Vecteurs &amp; Translation — Partie I</h1>
+        <h1 className="mb-3 text-3xl font-bold">Vecteurs &amp; Translation</h1>
         <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
           Référentiel : programme national marocain (Tronc commun),
           décision ministérielle 2.853.06.
@@ -478,8 +499,11 @@ function FillInFields({
   value: string
   onChange: (v: string) => void
 }) {
-  const parts = value ? value.split(' ; ') : fields.map(() => '')
-  while (parts.length < fields.length) parts.push('')
+  const parts = useMemo(() => {
+    const raw = value ? value.split(' ; ') : []
+    const pad = Math.max(0, fields.length - raw.length)
+    return [...raw, ...Array(pad).fill('')]
+  }, [value, fields])
 
   const set = (i: number, v: string) => {
     const next = [...parts]
@@ -517,10 +541,7 @@ interface ResultsProps {
 }
 
 function Results({ trials, onExit }: ResultsProps) {
-  const scorable = trials.filter((t) => {
-    const q = VECTORS_QUESTIONS[t.index]
-    return q.correctAnswer !== null && !q.pointPlacement && !q.fillIn
-  })
+  const scorable = trials.filter((t) => isVectorsScorableIndex(t.index))
   const correct = scorable.filter((t) => t.correct).length
   const pct =
     scorable.length > 0
@@ -536,10 +557,7 @@ function Results({ trials, onExit }: ResultsProps) {
       score: t.score ?? (t.correct ? 1 : 0),
       correct: t.correct,
     })),
-    isScorableIndex: (i) => {
-      const q = VECTORS_QUESTIONS[i]
-      return q?.correctAnswer !== null && !q.pointPlacement && !q.fillIn
-    },
+    isScorableIndex: isVectorsScorableIndex,
   })
 
   const geometryAnalytics = buildGeometryAnalyticsReport({
@@ -551,10 +569,7 @@ function Results({ trials, onExit }: ResultsProps) {
       score: t.score ?? (t.correct ? 1 : 0),
       correct: t.correct,
     })),
-    isScorableIndex: (i) => {
-      const q = VECTORS_QUESTIONS[i]
-      return Boolean(q?.correctAnswer !== null && !q.pointPlacement && !q.fillIn)
-    },
+    isScorableIndex: isVectorsScorableIndex,
     scoringMode: 'fraction',
   })
 

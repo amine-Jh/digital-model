@@ -42,7 +42,15 @@ import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataPoints } from '@/lib/geometry/capacity-results'
 import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
+import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-scoring-exclusions'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
+
+function isSymCentraleScorableIndex(i: number): boolean {
+  const q = SYMETRIE_CENTRALE_QUESTIONS[i]
+  return Boolean(
+    q && !isExcludedFromGeometryScoreAndAverage(q) && q.points > 0,
+  )
+}
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
@@ -102,7 +110,8 @@ export function SymetrieCentraleQuiz() {
   const submit = useCallback(() => {
     if (selectedList.length === 0) return
     const q = SYMETRIE_CENTRALE_QUESTIONS[current]
-    const correct = q.isDiagnostic ? false : gradeAnswer(q, selectedList)
+    const excluded = isExcludedFromGeometryScoreAndAverage(q)
+    const correct = !excluded && gradeAnswer(q, selectedList)
     const pointsEarned = correct ? q.points : 0
 
     const trial: SymCentraleTrialResult = {
@@ -135,6 +144,7 @@ export function SymetrieCentraleQuiz() {
     let maxC2 = 0
     for (const t of trials) {
       const q = SYMETRIE_CENTRALE_QUESTIONS[t.index]
+      if (!isSymCentraleScorableIndex(t.index)) continue
       if (q.competency === 'C1') {
         maxC1 += q.points
         scoreC1 += t.pointsEarned
@@ -150,12 +160,13 @@ export function SymetrieCentraleQuiz() {
       lessonTestId: SYMETRIE_CENTRALE_TEST_ID,
       perQuestion: trials.map((t) => {
         const q = SYMETRIE_CENTRALE_QUESTIONS[t.index]
+        const sc = isSymCentraleScorableIndex(t.index)
         return {
           questionId: t.questionId,
           capacityCodes: q.competency ? [q.competency] : [],
           part: null,
-          score: t.pointsEarned,
-          correct: t.correct,
+          score: sc ? t.pointsEarned : 0,
+          correct: sc && t.correct,
         }
       }),
       capacityBreakdown: {
@@ -181,10 +192,7 @@ export function SymetrieCentraleQuiz() {
         correct: t.correct,
         pointsEarned: t.pointsEarned,
       })),
-      isScorableIndex: (i) => {
-        const q = SYMETRIE_CENTRALE_QUESTIONS[i]
-        return Boolean(q && !q.isDiagnostic && q.points > 0)
-      },
+      isScorableIndex: isSymCentraleScorableIndex,
       scoringMode: 'points',
     })
     const r: SymCentraleResult = {
@@ -209,8 +217,12 @@ export function SymetrieCentraleQuiz() {
       completedAt: r.completedAt,
       totalMs: r.totalMs,
       score: r.maxScore > 0 ? Math.round((r.totalScore / r.maxScore) * 100) : 0,
-      correctCount: r.trials.filter((t) => t.correct).length,
-      totalQuestions: SYMETRIE_CENTRALE_QUESTIONS.length,
+      correctCount: r.trials.filter(
+        (t) => isSymCentraleScorableIndex(t.index) && t.correct,
+      ).length,
+      totalQuestions: SYMETRIE_CENTRALE_QUESTIONS.filter((_, i) =>
+        isSymCentraleScorableIndex(i),
+      ).length,
       trials: r.trials.map((t) => ({
         question_index: t.index,
         question_id: t.questionId,
@@ -291,7 +303,7 @@ function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void })
           <CapacityLegend testId={SYMETRIE_CENTRALE_TEST_ID} />
         </div>
         <div className="mb-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          <strong>Barème :</strong> Q1 diagnostique (0 pt) · C1 = 12 pts ·
+          <strong>Barème :</strong> trois auto-évaluations (non comptées) · C1 = 12 pts ·
           C2 = 8 pts · <strong>Total / 20</strong>.
         </div>
         <div className="mb-6 rounded-md border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
@@ -318,8 +330,9 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
         <h2 className="mb-3 text-2xl font-bold">Consignes</h2>
         <ol className="mb-6 space-y-2 text-sm text-muted-foreground">
           <li>
-            <strong>1.</strong> Q1 est une <em>auto-évaluation</em> non comptée
-            dans le score.
+            <strong>1.</strong> Les <em>auto-évaluations</em> (rappel de cours,
+            difficultés, ressenti sur la démonstration) ne comptent pas dans le
+            score ni dans les moyennes.
           </li>
           <li>
             <strong>2.</strong> Les questions Q7 à Q13 utilisent une{' '}
@@ -385,7 +398,7 @@ function TrialView({
           <span className="text-sm font-semibold text-rose-600">
             {question.id}
           </span>
-          {question.competency && (
+          {question.competency && question.points > 0 && (
             <p className="text-xs text-muted-foreground">
               Compétence : {question.competency} ·{' '}
               {question.points} pt{question.points > 1 ? 's' : ''}
@@ -411,7 +424,7 @@ function TrialView({
 
           {question.figure && <FigureRenderer kind={question.figure} />}
 
-          {question.isDiagnostic && (
+          {(question.isDiagnostic || question.isAutoeval) && (
             <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
               ℹ️ Auto-évaluation — non comptée dans le score final.
             </div>
@@ -427,7 +440,7 @@ function TrialView({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {question.optionImages.map((src, idx) => {
                 const isSelected = selectedList.includes(idx)
-                const label = `Figure ${idx + 1}`
+                const label = question.options[idx] ?? `Figure ${idx + 1}`
                 return (
                   <button
                     key={idx}
@@ -715,6 +728,7 @@ function Results({
   let maxC2 = 0
   for (const t of trials) {
     const q = SYMETRIE_CENTRALE_QUESTIONS[t.index]
+    if (!isSymCentraleScorableIndex(t.index)) continue
     if (q.competency === 'C1') {
       maxC1 += q.points
       scoreC1 += t.pointsEarned
@@ -748,10 +762,7 @@ function Results({
       correct: t.correct,
       pointsEarned: t.pointsEarned,
     })),
-    isScorableIndex: (i) => {
-      const q = SYMETRIE_CENTRALE_QUESTIONS[i]
-      return Boolean(q && !q.isDiagnostic && q.points > 0)
-    },
+    isScorableIndex: isSymCentraleScorableIndex,
     scoringMode: 'points',
   })
 

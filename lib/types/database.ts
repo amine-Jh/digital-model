@@ -1,7 +1,8 @@
 /**
  * Database type definitions.
  *
- * These types match the schema in supabase/schema.sql. Once the project
+ * These types match the schema in supabase/schema.sql (and
+ * supabase/migrations/0001_baseline.sql). Once the project
  * is connected to Supabase you should regenerate them with:
  *
  *   npx supabase gen types typescript \

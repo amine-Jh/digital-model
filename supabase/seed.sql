@@ -1,7 +1,8 @@
 -- =============================================================================
 -- CogniTest — seed data for the tests catalogue
 -- =============================================================================
--- Run AFTER schema.sql + policies.sql. Idempotent.
+-- Run AFTER schema/RLS (e.g. supabase/migrations/0001_baseline.sql or
+-- schema.sql + policies.sql). Idempotent.
 -- Must include every `test_id` used in the app (`lib/mock-data.ts` + legacy
 -- aliases) so `test_sessions.test_id` FK inserts succeed.
 -- =============================================================================

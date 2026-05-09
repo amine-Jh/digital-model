@@ -1,7 +1,7 @@
 -- =============================================================================
 -- CogniTest — Row Level Security
 -- =============================================================================
--- Merged baseline: ../migrations/0001_baseline.sql  |  Guide: ../migrations/README.md
+-- Merged baseline: supabase/migrations/0001_baseline.sql  |  Guide: supabase/migrations/README.md
 --
 -- Run AFTER schema.sql.
 --

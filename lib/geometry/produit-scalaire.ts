@@ -12,13 +12,13 @@
  *   lesson  D1 = Produit scalaire
  *   lesson  D2 = Géométrie analytique
  *
- * Competencies (C1 → C5):
+ * Competencies (C1 → C6):
  *  C1 Définition et propriétés du produit scalaire
  *  C2 Lecture / calcul dans un repère
  *  C3 Théorèmes (Al-Kashi, médiane) et raisonnement métrique
  *  C4 Cercles : équations, centre et rayon
  *  C5 Géométrie analytique : droites, distances, projections
- *  (ancien C6 regroupé sous C5 — propriétés analytiques / applications)
+ *  C6 Raisonnement et démonstration géométrique avancée (produit scalaire)
  */
 
 export const PRODUIT_SCALAIRE_TEST_ID = 'test-geo-produit-scalaire'
@@ -40,13 +40,15 @@ export interface ProduitScalaireQuestion {
   /** If true: rendered as a textarea, never scored. */
   isOpenEnded?: boolean
   /** When set, the question renders an interactive coordinate plane where
-   *  the student must place two points; the expected straight line is
-   *  ax + by + c = 0. Never auto-scored — kept for review. */
+   *  the student places two points defining a line. If `graded` is true,
+   *  the line must pass through every `passThrough` point (integer lattice). */
   interactiveLine?: {
     equation: string
     a: number
     b: number
     c: number
+    graded?: boolean
+    passThrough?: { x: number; y: number }[]
   }
 }
 
@@ -129,12 +131,13 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     competencies: ['C1'],
     question: 'Si \\( \\vec{U} \\perp \\vec{V} \\), alors :',
     options: [
+      '\\( \\vec{U} \\cdot \\vec{V} = 1 \\)',
       '\\( \\vec{U} \\cdot \\vec{V} = 0 \\)',
       '\\( \\vec{U} \\cdot \\vec{V} = \\vec{0} \\)',
       '\\( \\vec{U} \\) ou \\( \\vec{V} \\) est nul',
       "J'ai oublié",
     ],
-    correctAnswer: 0,
+    correctAnswer: 1,
   },
   {
     id: 'T1-D1-Q5',
@@ -256,7 +259,7 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     number: 13,
     typeCode: 2,
     lessonCode: 1,
-    competencies: ['C5'],
+    competencies: ['C6'],
     question: 'Calculer \\( \\vec{a}\\cdot\\vec{w} \\) :',
     options: ['\\( 8 \\)', '\\( -8 \\)', '\\( 9 \\)'],
     correctAnswer: 2,
@@ -302,11 +305,20 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     lessonCode: 2,
     competencies: ['C5'],
     question:
-      'Placer deux points dans le repère et tracer la droite d\'équation \\( x + y - 1 = 0 \\).',
+      'Placer deux points dans le repère et tracer la droite d\'équation \\( x + y - 1 = 0 \\). La droite correcte passe obligatoirement par \\( (2,-1) \\) et \\( (0,1) \\).',
     options: [],
     correctAnswer: null,
-    isOpenEnded: true,
-    interactiveLine: { equation: 'x + y - 1 = 0', a: 1, b: 1, c: -1 },
+    interactiveLine: {
+      equation: 'x + y - 1 = 0',
+      a: 1,
+      b: 1,
+      c: -1,
+      graded: true,
+      passThrough: [
+        { x: 2, y: -1 },
+        { x: 0, y: 1 },
+      ],
+    },
   },
 
   // ═══ Partie III — Raisonnement déductif ═════════════════════════════════
@@ -334,11 +346,20 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     lessonCode: 2,
     competencies: ['C5'],
     question:
-      'Placer deux points dans le repère et tracer la droite \\( \\Delta:\\ 2x - 3y + 2 = 0 \\).',
+      'Placer deux points dans le repère et tracer la droite \\( \\Delta:\\ 2x - 3y + 2 = 0 \\). La droite correcte passe obligatoirement par \\( (-1,0) \\) et \\( (2,2) \\).',
     options: [],
     correctAnswer: null,
-    isOpenEnded: true,
-    interactiveLine: { equation: '2x - 3y + 2 = 0', a: 2, b: -3, c: 2 },
+    interactiveLine: {
+      equation: '2x - 3y + 2 = 0',
+      a: 2,
+      b: -3,
+      c: 2,
+      graded: true,
+      passThrough: [
+        { x: -1, y: 0 },
+        { x: 2, y: 2 },
+      ],
+    },
   },
   {
     id: 'T3-D2-Q20',

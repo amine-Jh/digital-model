@@ -16,20 +16,21 @@ import {
   saveSymetrieAxialeResult,
 } from '@/lib/geometry/symetrie-axiale'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
-import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
+import { scoreGeometryQuestion } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
-import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
+import { buildGeometrySessionMetadataPoints } from '@/lib/geometry/capacity-results'
 import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
+import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-scoring-exclusions'
+import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
-function arrayEquals(a: number[], b: number[]) {
-  if (a.length !== b.length) return false
-  const as = [...a].sort()
-  const bs = [...b].sort()
-  return as.every((v, i) => v === bs[i])
+function isAxialeScorableIndex(i: number): boolean {
+  const q = SYMETRIE_AXIALE_QUESTIONS[i]
+  if (!q) return false
+  return !isExcludedFromGeometryScoreAndAverage(q) && (q.points ?? 0) > 0
 }
 
 export function SymetrieAxialeQuiz() {
@@ -48,32 +49,34 @@ export function SymetrieAxialeQuiz() {
     (currentQuestion.correctAnswer as number[]).length > 1
 
   const toggleSelect = (idx: number) => {
-    if (isMulti) {
-      setSelectedList((prev) =>
-        prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx],
-      )
-    } else {
-      setSelectedList([idx])
-    }
+    setSelectedList((prev) =>
+      toggleSelectionWithExclusive(currentQuestion?.options ?? [], prev, idx, isMulti),
+    )
   }
 
   const submit = useCallback(() => {
     if (selectedList.length === 0) return
 
     const question = SYMETRIE_AXIALE_QUESTIONS[current]
-
-    const score = scoreGeometryQuestion({
-      options: question.options,
-      selected: selectedList,
-      correctAnswer: question.correctAnswer,
-    })
+    const excluded = isExcludedFromGeometryScoreAndAverage(question)
+    const score = excluded
+      ? 0
+      : scoreGeometryQuestion({
+          options: question.options,
+          selected: selectedList,
+          correctAnswer: question.correctAnswer,
+        })
+    const pts = question.points ?? 0
+    const pointsEarned =
+      excluded || pts === 0 ? 0 : score >= 1 ? pts : 0
 
     const trial: SymetrieAxialeTrialResult = {
       index: current,
       questionId: question.id,
-      selected: selectedList[0],
-      correct: score === 1,
+      selected: [...selectedList],
+      correct: !excluded && score === 1,
       score,
+      pointsEarned,
       reactionTimeMs: Date.now() - trialStart.current,
     }
     setTrials((t) => [...t, trial])
@@ -91,12 +94,35 @@ export function SymetrieAxialeQuiz() {
 
   useEffect(() => {
     if (phase === 'done' && trials.length > 0) {
-      // Filter out pre-question and visualization questions from scoring
-      const scorableTrials = trials.filter((t) => {
-        const question = SYMETRIE_AXIALE_QUESTIONS[t.index]
-        return question.correctAnswer !== null
-      })
-      const correct = scorableTrials.filter((t) => t.correct).length
+      let scoreC1 = 0
+      let maxC1 = 0
+      let scoreC2 = 0
+      let maxC2 = 0
+      let earned = 0
+      let maxPts = 0
+      const scorableCount = SYMETRIE_AXIALE_QUESTIONS.filter((_, i) =>
+        isAxialeScorableIndex(i),
+      ).length
+      for (const t of trials) {
+        const q = SYMETRIE_AXIALE_QUESTIONS[t.index]
+        if (!isAxialeScorableIndex(t.index)) continue
+        const pe = t.pointsEarned ?? 0
+        const cap = q.points ?? 0
+        earned += pe
+        maxPts += cap
+        if (q.competencies.includes('C1')) {
+          maxC1 += cap
+          scoreC1 += pe
+        }
+        if (q.competencies.includes('C2')) {
+          maxC2 += cap
+          scoreC2 += pe
+        }
+      }
+      const totalPct = maxPts > 0 ? Math.round((earned / maxPts) * 100) : 0
+      const correct = trials.filter(
+        (t) => isAxialeScorableIndex(t.index) && t.correct,
+      ).length
       const r: SymetrieAxialeResult = {
         id: `sa-${Date.now()}`,
         userName: user?.username,
@@ -105,9 +131,49 @@ export function SymetrieAxialeQuiz() {
         trials,
         totalMs: Date.now() - startedAt,
         correctCount: correct,
-        score: computeFinalPercent(scorableTrials.map((t) => (t as { score?: number }).score ?? 0)),
+        score: totalPct,
+        scorePoints: earned,
+        maxScorePoints: maxPts,
       }
       saveSymetrieAxialeResult(r)
+      const geoPayload = buildGeometrySessionMetadataPoints({
+        lessonTestId: SYMETRIE_AXIALE_TEST_ID,
+        perQuestion: trials.map((t) => {
+          const q = SYMETRIE_AXIALE_QUESTIONS[t.index]
+          return {
+            questionId: t.questionId,
+            capacityCodes: [...(q.competencies ?? [])],
+            part: q.part ?? null,
+            score: t.pointsEarned ?? 0,
+            correct: t.correct,
+          }
+        }),
+        capacityBreakdown: {
+          C1: {
+            earned: scoreC1,
+            max: maxC1,
+            percent: maxC1 > 0 ? Math.round((scoreC1 / maxC1) * 100) : 0,
+          },
+          C2: {
+            earned: scoreC2,
+            max: maxC2,
+            percent: maxC2 > 0 ? Math.round((scoreC2 / maxC2) * 100) : 0,
+          },
+        },
+        totalPercent: totalPct,
+      })
+      const geometryAnalytics = buildGeometryAnalyticsReport({
+        testId: SYMETRIE_AXIALE_TEST_ID,
+        questions: SYMETRIE_AXIALE_QUESTIONS,
+        trials: trials.map((t) => ({
+          index: t.index,
+          questionId: t.questionId,
+          correct: t.correct,
+          pointsEarned: t.pointsEarned ?? 0,
+        })),
+        isScorableIndex: isAxialeScorableIndex,
+        scoringMode: 'points',
+      })
       persistCompletedTestSessionBestEffort({
         testId: SYMETRIE_AXIALE_TEST_ID,
         startedAt: r.startedAt,
@@ -115,45 +181,20 @@ export function SymetrieAxialeQuiz() {
         totalMs: r.totalMs,
         score: r.score,
         correctCount: r.correctCount,
-        totalQuestions: SYMETRIE_AXIALE_QUESTIONS.length,
+        totalQuestions: scorableCount,
         trials: r.trials.map((t) => ({
           question_index: t.index,
           question_id: t.questionId,
-          selected: [t.selected],
+          selected: t.selected,
           correct: t.correct,
-          score: t.score ?? (t.correct ? 1 : 0),
+          score: t.pointsEarned != null ? Math.min(1, t.pointsEarned / 2) : t.score ?? 0,
           reaction_time_ms: t.reactionTimeMs,
         })),
-        metadata: (() => {
-          const geoPayload = buildGeometrySessionMetadataFraction({
-            lessonTestId: SYMETRIE_AXIALE_TEST_ID,
-            questions: SYMETRIE_AXIALE_QUESTIONS,
-            trials: r.trials.map((t) => ({
-              index: t.index,
-              questionId: t.questionId,
-              score: t.score ?? (t.correct ? 1 : 0),
-              correct: t.correct,
-            })),
-            isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
-          })
-          const geometryAnalytics = buildGeometryAnalyticsReport({
-            testId: SYMETRIE_AXIALE_TEST_ID,
-            questions: SYMETRIE_AXIALE_QUESTIONS,
-            trials: r.trials.map((t) => ({
-              index: t.index,
-              questionId: t.questionId,
-              score: t.score ?? (t.correct ? 1 : 0),
-              correct: t.correct,
-            })),
-            isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
-            scoringMode: 'fraction',
-          })
-          return {
-            source: 'symetrie-axiale-quiz',
-            ...geoPayload,
-            geometryAnalytics,
-          }
-        })(),
+        metadata: {
+          source: 'symetrie-axiale-quiz',
+          ...geoPayload,
+          geometryAnalytics,
+        },
       })
     }
   }, [phase, trials, startedAt, user])
@@ -218,6 +259,11 @@ function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void })
         <div className="mb-4">
           <CapacityLegend testId={SYMETRIE_AXIALE_TEST_ID} />
         </div>
+        <div className="mb-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+          <strong>Barème :</strong> Q2–Q15 → 1 pt chacune (C1 /14) · Q16–Q18 → 2 pts
+          chacune (C2 /6) · <strong>Total /20</strong>. Les auto-évaluations ne comptent pas
+          dans le score.
+        </div>
         <div className="mb-6 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
           <strong>Durée estimée :</strong> ~15 minutes. Répondez avec soin à chaque question.
         </div>
@@ -248,10 +294,11 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
             <strong>3.</strong> Cliquez « Valider » pour passer à la question suivante.
           </li>
           <li>
-            <strong>4.</strong> Vous recevez 1 point pour chaque réponse correcte.
+            <strong>4.</strong> Barème : questions Q2–Q15 → 1 point chacune (C1) ; Q16–Q18 → 2 points
+            chacune (C2). Total sur 20. Les auto-évaluations ne comptent pas.
           </li>
           <li>
-            <strong>5.</strong> À la fin, vous verrez votre score total et les détails de vos réponses.
+            <strong>5.</strong> À la fin : score sur 20, synthèse par parties et par compétences.
           </li>
         </ol>
         <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
@@ -278,6 +325,7 @@ interface TrialViewProps {
     part: string
     correctAnswer: number | number[] | null
     correction?: string
+    points?: number
   }
   selectedList: number[]
   isMulti: boolean
@@ -321,6 +369,11 @@ function TrialView({
               Compétence: {question.competencies.join(', ')}
             </p>
           )}
+          {typeof question.points === 'number' && question.points > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Barème : {question.points} pt{question.points > 1 ? 's' : ''}
+            </p>
+          )}
         </div>
       </div>
       <Progress value={((index + 1) / total) * 100} className="mb-6" />
@@ -355,6 +408,14 @@ function TrialView({
                 __html: renderInlineLatex(question.question),
               }}
             />
+
+            {(question.part === 'preQuestion' ||
+              question.part === 'autoeval2' ||
+              question.part === 'autoeval3') && (
+              <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
+                Auto-évaluation — non comptée dans le score (/20).
+              </div>
+            )}
 
             {isMulti && (
               <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30">
@@ -426,25 +487,44 @@ interface ResultsProps {
 }
 
 function Results({ trials, onExit }: ResultsProps) {
-  // Filter out pre-question and visualization questions from scoring
-  const scorableTrials = trials.filter((t) => {
-    const question = SYMETRIE_AXIALE_QUESTIONS[t.index]
-    return question.correctAnswer !== null
-  })
-  const correct = scorableTrials.filter((t) => t.correct).length
-  const percentage = scorableTrials.length > 0 ? Math.round((correct / scorableTrials.length) * 100) : 0
+  let earned = 0
+  let maxPts = 0
+  let scoreC1 = 0
+  let maxC1 = 0
+  let scoreC2 = 0
+  let maxC2 = 0
+  for (const t of trials) {
+    const q = SYMETRIE_AXIALE_QUESTIONS[t.index]
+    if (!isAxialeScorableIndex(t.index)) continue
+    const pe = t.pointsEarned ?? 0
+    const cap = q.points ?? 0
+    earned += pe
+    maxPts += cap
+    if (q.competencies.includes('C1')) {
+      scoreC1 += pe
+      maxC1 += cap
+    }
+    if (q.competencies.includes('C2')) {
+      scoreC2 += pe
+      maxC2 += cap
+    }
+  }
+  const pct = maxPts > 0 ? Math.round((earned / maxPts) * 100) : 0
+  const correct = trials.filter((t) => isAxialeScorableIndex(t.index) && t.correct).length
+  const scorableN = SYMETRIE_AXIALE_QUESTIONS.filter((_, i) => isAxialeScorableIndex(i)).length
 
-  const geo = buildGeometrySessionMetadataFraction({
-    lessonTestId: SYMETRIE_AXIALE_TEST_ID,
-    questions: SYMETRIE_AXIALE_QUESTIONS,
-    trials: trials.map((t) => ({
-      index: t.index,
-      questionId: t.questionId,
-      score: t.score ?? (t.correct ? 1 : 0),
-      correct: t.correct,
-    })),
-    isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
-  })
+  const breakdown = {
+    C1: {
+      earned: scoreC1,
+      max: maxC1,
+      percent: maxC1 > 0 ? Math.round((scoreC1 / maxC1) * 100) : 0,
+    },
+    C2: {
+      earned: scoreC2,
+      max: maxC2,
+      percent: maxC2 > 0 ? Math.round((scoreC2 / maxC2) * 100) : 0,
+    },
+  }
 
   const geometryAnalytics = buildGeometryAnalyticsReport({
     testId: SYMETRIE_AXIALE_TEST_ID,
@@ -452,11 +532,11 @@ function Results({ trials, onExit }: ResultsProps) {
     trials: trials.map((t) => ({
       index: t.index,
       questionId: t.questionId,
-      score: t.score ?? (t.correct ? 1 : 0),
       correct: t.correct,
+      pointsEarned: t.pointsEarned ?? 0,
     })),
-    isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
-    scoringMode: 'fraction',
+    isScorableIndex: isAxialeScorableIndex,
+    scoringMode: 'points',
   })
 
   return (
@@ -468,25 +548,28 @@ function Results({ trials, onExit }: ResultsProps) {
           <div className="rounded-md border bg-muted/20 p-3">
             <p className="text-xs text-muted-foreground">Score</p>
             <p className="text-2xl font-bold">
-              {correct} / {scorableTrials.length}
+              {earned} / {maxPts}
             </p>
           </div>
           <div className="rounded-md border bg-muted/20 p-3">
             <p className="text-xs text-muted-foreground">Pourcentage</p>
-            <p className="text-2xl font-bold">{percentage}%</p>
+            <p className="text-2xl font-bold">{pct}%</p>
           </div>
         </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Réponses entièrement correctes : {correct} / {scorableN}
+        </p>
         <GeometryAnalyticsSummary report={geometryAnalytics} />
         <CapacityBreakdownCard
           testId={SYMETRIE_AXIALE_TEST_ID}
-          breakdown={geo.capacityBreakdown}
-          unit="fraction"
+          breakdown={breakdown}
+          unit="points"
         />
         <div className="mb-6 max-h-64 overflow-auto rounded-md border bg-slate-50 p-3 dark:bg-slate-900">
           <p className="mb-2 text-xs font-semibold text-muted-foreground">Détails :</p>
           {trials.map((t) => {
             const question = SYMETRIE_AXIALE_QUESTIONS[t.index]
-            const isAutoEval = question.correctAnswer === null
+            const isAutoEval = !isAxialeScorableIndex(t.index)
             return (
               <div key={t.index} className="text-left text-xs border-b border-slate-200 dark:border-slate-700 py-2 last:border-b-0">
                 {isAutoEval ? (

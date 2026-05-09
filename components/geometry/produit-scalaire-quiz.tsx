@@ -19,13 +19,15 @@ import {
 } from '@/lib/geometry/produit-scalaire'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
-import { InteractiveLinePlot, PlottedPoint } from '@/components/geometry/interactive-line-plot'
+import { InteractiveLinePlot } from '@/components/geometry/interactive-line-plot'
 import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
 import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
+import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-scoring-exclusions'
+import { interactiveLineThroughPoints } from '@/lib/geometry/interactive-line-grade'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
@@ -60,7 +62,9 @@ export function ProduitScalaireQuiz() {
   const [startedAt, setStartedAt] = useState<number>(0)
   const trialStart = useRef(0)
 
-  const question = PRODUIT_SCALAIRE_QUESTIONS[current]
+  const maxIx = Math.max(0, PRODUIT_SCALAIRE_QUESTIONS.length - 1)
+  const idx = Math.min(Math.max(0, current), maxIx)
+  const question = PRODUIT_SCALAIRE_QUESTIONS[idx]
   const isMulti =
     Array.isArray(question?.correctAnswer) &&
     (question.correctAnswer as number[]).length > 1
@@ -72,12 +76,48 @@ export function ProduitScalaireQuiz() {
   }
 
   const submit = useCallback(() => {
-    const q = PRODUIT_SCALAIRE_QUESTIONS[current]
+    const hi = Math.max(0, PRODUIT_SCALAIRE_QUESTIONS.length - 1)
+    const i = Math.min(Math.max(0, current), hi)
+    const q = PRODUIT_SCALAIRE_QUESTIONS[i]
+    if (!q) return
 
-    // open-ended, interactive, or diagnostic items: record and skip scoring
-    if (q.isOpenEnded || q.isDiagnostic || q.interactiveLine) {
+    if (q.interactiveLine?.graded && q.interactiveLine.passThrough?.length) {
+      const ok = interactiveLineThroughPoints(
+        freeText,
+        q.interactiveLine.passThrough,
+      )
       const trial: ProduitScalaireTrialResult = {
-        index: current,
+        index: i,
+        questionId: q.id,
+        selected: selectedList,
+        freeText,
+        correct: ok,
+        score: ok ? 1 : 0,
+        reactionTimeMs: Date.now() - trialStart.current,
+      }
+      setTrials((t) => [...t, trial])
+      setSelectedList([])
+      setFreeText('')
+      setShowHint(false)
+      if (i + 1 >= PRODUIT_SCALAIRE_QUESTIONS.length) {
+        setPhase('done')
+      } else {
+        setCurrent((n) => n + 1)
+        setTimeout(() => {
+          trialStart.current = Date.now()
+        }, 100)
+      }
+      return
+    }
+
+    // open-ended, non-graded interactive, or diagnostic items: record and skip scoring
+    if (
+      q.isOpenEnded ||
+      q.isDiagnostic ||
+      (q.interactiveLine != null && !q.interactiveLine.graded)
+    ) {
+      const trial: ProduitScalaireTrialResult = {
+        index: i,
         questionId: q.id,
         selected: selectedList,
         freeText: q.isOpenEnded || q.interactiveLine ? freeText : undefined,
@@ -88,7 +128,7 @@ export function ProduitScalaireQuiz() {
       setSelectedList([])
       setFreeText('')
       setShowHint(false)
-      if (current + 1 >= PRODUIT_SCALAIRE_QUESTIONS.length) {
+      if (i + 1 >= PRODUIT_SCALAIRE_QUESTIONS.length) {
         setPhase('done')
       } else {
         setCurrent((n) => n + 1)
@@ -108,7 +148,7 @@ export function ProduitScalaireQuiz() {
     })
 
     const trial: ProduitScalaireTrialResult = {
-      index: current,
+      index: i,
       questionId: q.id,
       selected: selectedList,
       correct: score === 1,
@@ -120,7 +160,7 @@ export function ProduitScalaireQuiz() {
     setFreeText('')
     setShowHint(false)
 
-    if (current + 1 >= PRODUIT_SCALAIRE_QUESTIONS.length) {
+    if (i + 1 >= PRODUIT_SCALAIRE_QUESTIONS.length) {
       setPhase('done')
     } else {
       setCurrent((n) => n + 1)
@@ -131,15 +171,19 @@ export function ProduitScalaireQuiz() {
   }, [current, selectedList, freeText])
 
   useEffect(() => {
+    if (phase !== 'running') return
+    const hi = Math.max(0, PRODUIT_SCALAIRE_QUESTIONS.length - 1)
+    if (current > hi) setCurrent(hi)
+  }, [phase, current])
+
+  useEffect(() => {
     if (phase === 'done' && trials.length > 0) {
       const scorable = trials.filter((t) => {
         const q = PRODUIT_SCALAIRE_QUESTIONS[t.index]
-        return (
-          q.correctAnswer !== null &&
-          !q.isDiagnostic &&
-          !q.isOpenEnded &&
-          !q.interactiveLine
-        )
+        return !isExcludedFromGeometryScoreAndAverage({
+          ...q,
+          question: q.question,
+        })
       })
       const correct = scorable.filter((t) => t.correct).length
       const r: ProduitScalaireResult = {
@@ -186,11 +230,12 @@ export function ProduitScalaireQuiz() {
             })),
             isScorableIndex: (i) => {
               const q = PRODUIT_SCALAIRE_QUESTIONS[i]
-              return (
-                q?.correctAnswer !== null &&
-                !q.isDiagnostic &&
-                !q.isOpenEnded &&
-                !q.interactiveLine
+              return Boolean(
+                q &&
+                  !isExcludedFromGeometryScoreAndAverage({
+                    ...q,
+                    question: q.question,
+                  }),
               )
             },
           })
@@ -205,11 +250,12 @@ export function ProduitScalaireQuiz() {
             })),
             isScorableIndex: (i) => {
               const q = PRODUIT_SCALAIRE_QUESTIONS[i]
-              return (
-                q?.correctAnswer !== null &&
-                !q.isDiagnostic &&
-                !q.isOpenEnded &&
-                !q.interactiveLine
+              return Boolean(
+                q &&
+                  !isExcludedFromGeometryScoreAndAverage({
+                    ...q,
+                    question: q.question,
+                  }),
               )
             },
             scoringMode: 'fraction',
@@ -254,9 +300,20 @@ export function ProduitScalaireQuiz() {
     return <Results trials={trials} onExit={() => router.push('/dashboard')} />
   }
 
+  if (!question) {
+    return (
+      <main className="container mx-auto max-w-2xl py-16 text-center text-sm text-muted-foreground">
+        <p>Chargement du questionnaire…</p>
+        <Button className="mt-4" onClick={() => router.push('/dashboard')}>
+          Retour au tableau de bord
+        </Button>
+      </main>
+    )
+  }
+
   return (
     <TrialView
-      index={current}
+      index={idx}
       total={PRODUIT_SCALAIRE_QUESTIONS.length}
       question={question}
       selectedList={selectedList}
@@ -476,6 +533,12 @@ function TrialView({
 
             {question.interactiveLine ? (
               <div className="space-y-3">
+                {question.interactiveLine.graded && (
+                  <div className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
+                    La correction automatique vérifie que la droite définie par vos
+                    deux points passe bien par les points indiqués dans l&apos;énoncé.
+                  </div>
+                )}
                 <InteractiveLinePlot
                   equation={question.interactiveLine.equation}
                   onChange={(pts) =>
@@ -572,12 +635,10 @@ interface ResultsProps {
 function Results({ trials, onExit }: ResultsProps) {
   const scorable = trials.filter((t) => {
     const q = PRODUIT_SCALAIRE_QUESTIONS[t.index]
-    return (
-      q.correctAnswer !== null &&
-      !q.isDiagnostic &&
-      !q.isOpenEnded &&
-      !q.interactiveLine
-    )
+    return !isExcludedFromGeometryScoreAndAverage({
+      ...q,
+      question: q.question,
+    })
   })
   const correct = scorable.filter((t) => t.correct).length
   const pct = scorable.length > 0 ? Math.round((correct / scorable.length) * 100) : 0
@@ -617,11 +678,12 @@ function Results({ trials, onExit }: ResultsProps) {
     })),
     isScorableIndex: (i) => {
       const q = PRODUIT_SCALAIRE_QUESTIONS[i]
-      return (
-        q?.correctAnswer !== null &&
-        !q.isDiagnostic &&
-        !q.isOpenEnded &&
-        !q.interactiveLine
+      return Boolean(
+        q &&
+          !isExcludedFromGeometryScoreAndAverage({
+            ...q,
+            question: q.question,
+          }),
       )
     },
   })
@@ -637,11 +699,12 @@ function Results({ trials, onExit }: ResultsProps) {
     })),
     isScorableIndex: (i) => {
       const q = PRODUIT_SCALAIRE_QUESTIONS[i]
-      return (
-        q?.correctAnswer !== null &&
-        !q.isDiagnostic &&
-        !q.isOpenEnded &&
-        !q.interactiveLine
+      return Boolean(
+        q &&
+          !isExcludedFromGeometryScoreAndAverage({
+            ...q,
+            question: q.question,
+          }),
       )
     },
     scoringMode: 'fraction',

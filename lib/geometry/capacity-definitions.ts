@@ -14,17 +14,27 @@ export const CAPACITIES_BY_TEST: Record<string, CapacityDef[]> = {
     {
       code: 'C1',
       label:
-        'expression de la distance et perpendicularité à l’aide du produit scalaire',
+        'la construction d’un vecteur sous la forme de \\( A\\vec{u} + B\\vec{v} \\)',
     },
     {
       code: 'C2',
       label:
-        'utilisation du produit scalaire dans la résolution de problèmes géométriques',
+        'l’expression des concepts et des propriétés géométriques affines en utilisant l’outil vectoriel et inversement',
     },
     {
       code: 'C3',
       label:
-        'utilisation du théorème de Cauchy et de la médiane dans les problèmes géométriques',
+        'la résolution des problèmes géométriques à l’aide de l’outil vectoriel',
+    },
+    {
+      code: 'C4',
+      label:
+        'reconnaître la similarité des formes géométriques à l’aide de la translation',
+    },
+    {
+      code: 'C5',
+      label:
+        'l’utilisation de la translation dans la résolution des problèmes géométriques',
     },
   ],
   'test-geo-space': [
@@ -106,6 +116,11 @@ export const CAPACITIES_BY_TEST: Record<string, CapacityDef[]> = {
       code: 'C5',
       label:
         'utilisation des propriétés analytiques du produit scalaire pour résoudre des problèmes géométriques',
+    },
+    {
+      code: 'C6',
+      label:
+        'questions de raisonnement et démonstration géométrique avancée utilisant le produit scalaire',
     },
   ],
 }
