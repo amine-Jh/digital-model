@@ -8,6 +8,10 @@ import type { Database } from '@/lib/types/database'
 import { platformDomains } from '@/lib/platform-domains'
 import { VP_SUBTESTS } from '@/lib/visuo-perceptive'
 import { latestSessionByTestId } from '@/lib/student-test-progress'
+import {
+  parseGeometryAnalyticsReport,
+  type GeometryAnalyticsReport,
+} from '@/lib/geometry/geometry-analytics-report'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 type StudentProfileRow = Database['public']['Tables']['student_profiles']['Row']
@@ -37,6 +41,8 @@ export type AdminStudentSummary = {
       breakdown: AdminCapacityBreakdown
     }
   >
+  /** Latest `metadata.geometryAnalytics` per test (geometry lessons). */
+  geometryAnalyticsByTest?: Record<string, GeometryAnalyticsReport>
 }
 
 export function domainAverageForAdminStudent(
@@ -128,6 +134,9 @@ export async function fetchAdminResultsData(): Promise<{
     const latest = latestSessionByTestId(rows)
     const testScores: Record<string, number> = {}
     const capacityByTest: NonNullable<AdminStudentSummary['capacityByTest']> = {}
+    const geometryAnalyticsByTest: NonNullable<
+      AdminStudentSummary['geometryAnalyticsByTest']
+    > = {}
     for (const [tid, row] of latest) {
       if (row.status === 'completed' && row.score != null) {
         testScores[tid] = Math.round(Number(row.score))
@@ -147,6 +156,8 @@ export async function fetchAdminResultsData(): Promise<{
             breakdown: br as AdminCapacityBreakdown,
           }
         }
+        const ga = parseGeometryAnalyticsReport(meta.geometryAnalytics)
+        if (ga) geometryAnalyticsByTest[tid] = ga
       }
     }
     const tid = sp?.teacher_id ?? null
@@ -164,6 +175,8 @@ export async function fetchAdminResultsData(): Promise<{
       institutionId: school || '—',
       testScores,
       capacityByTest: Object.keys(capacityByTest).length > 0 ? capacityByTest : undefined,
+      geometryAnalyticsByTest:
+        Object.keys(geometryAnalyticsByTest).length > 0 ? geometryAnalyticsByTest : undefined,
     }
   })
 

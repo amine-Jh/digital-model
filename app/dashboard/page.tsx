@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { ChartAreaSkeleton, ValueTextSkeleton } from '@/components/ui/value-skeleton'
 import { Skeleton } from '@/components/ui/skeleton'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 
 type SessionRow = Database['public']['Tables']['test_sessions']['Row']
 
@@ -661,6 +662,14 @@ export default function StudentDashboard() {
                               <Progress value={t.latestScore} className="h-1" />
                             </div>
                           )}
+                          {sessionDataReady &&
+                            t.status === 'completed' &&
+                            t.latestGeometryAnalytics && (
+                              <GeometryAnalyticsSummary
+                                report={t.latestGeometryAnalytics}
+                                compact
+                              />
+                            )}
                         </div>
                       </Link>
                     )

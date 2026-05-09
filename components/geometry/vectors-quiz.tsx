@@ -16,12 +16,15 @@ import {
   saveVectorsResult,
 } from '@/lib/geometry/geo-vectors-complete'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
+import type { Json } from '@/lib/types/database'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
 import { ClickableVectorsPlane } from '@/components/geometry/clickable-vectors-plane'
 import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
+import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
@@ -113,7 +116,7 @@ export function VectorsQuizTest() {
       const trialsPayload = r.trials.map((t) => ({
         question_index: t.index,
         question_id: t.questionId,
-        selected: (t.selectedList?.length ? t.selectedList : [t.selected]) as unknown[],
+        selected: (t.selectedList?.length ? t.selectedList : [t.selected]) as Json,
         free_text: t.freeText ?? null,
         correct: t.correct,
         score: t.score ?? (t.correct ? 1 : 0),
@@ -128,9 +131,8 @@ export function VectorsQuizTest() {
         correctCount: r.correctCount,
         totalQuestions: VECTORS_QUESTIONS.length,
         trials: trialsPayload,
-        metadata: {
-          source: 'vectors-quiz',
-          ...buildGeometrySessionMetadataFraction({
+        metadata: (() => {
+          const geoPayload = buildGeometrySessionMetadataFraction({
             lessonTestId: VECTORS_TEST_ID,
             questions: VECTORS_QUESTIONS,
             trials: r.trials.map((t) => ({
@@ -145,8 +147,30 @@ export function VectorsQuizTest() {
                 q?.correctAnswer !== null && !q.pointPlacement && !q.fillIn
               )
             },
-          }),
-        },
+          })
+          const geometryAnalytics = buildGeometryAnalyticsReport({
+            testId: VECTORS_TEST_ID,
+            questions: VECTORS_QUESTIONS,
+            trials: r.trials.map((t) => ({
+              index: t.index,
+              questionId: t.questionId,
+              score: t.score ?? (t.correct ? 1 : 0),
+              correct: t.correct,
+            })),
+            isScorableIndex: (i) => {
+              const q = VECTORS_QUESTIONS[i]
+              return Boolean(
+                q?.correctAnswer !== null && !q.pointPlacement && !q.fillIn,
+              )
+            },
+            scoringMode: 'fraction',
+          })
+          return {
+            source: 'vectors-quiz',
+            ...geoPayload,
+            geometryAnalytics,
+          }
+        })(),
       })
     }
   }, [phase, trials, startedAt, user])
@@ -518,6 +542,22 @@ function Results({ trials, onExit }: ResultsProps) {
     },
   })
 
+  const geometryAnalytics = buildGeometryAnalyticsReport({
+    testId: VECTORS_TEST_ID,
+    questions: VECTORS_QUESTIONS,
+    trials: trials.map((t) => ({
+      index: t.index,
+      questionId: t.questionId,
+      score: t.score ?? (t.correct ? 1 : 0),
+      correct: t.correct,
+    })),
+    isScorableIndex: (i) => {
+      const q = VECTORS_QUESTIONS[i]
+      return Boolean(q?.correctAnswer !== null && !q.pointPlacement && !q.fillIn)
+    },
+    scoringMode: 'fraction',
+  })
+
   return (
     <main className="container mx-auto max-w-2xl py-10">
       <Card className="p-8 text-center">
@@ -535,6 +575,7 @@ function Results({ trials, onExit }: ResultsProps) {
             <p className="text-2xl font-bold">{pct}%</p>
           </div>
         </div>
+        <GeometryAnalyticsSummary report={geometryAnalytics} />
         <CapacityBreakdownCard
           testId={VECTORS_TEST_ID}
           breakdown={geo.capacityBreakdown}

@@ -8,6 +8,7 @@ import {
   ensureTestSessionFkPrereqs,
   normalizeTrialQuestionIndices,
 } from '@/lib/supabase/ensure-test-session-fk'
+import { persistGeometryAnalyticsRows } from '@/lib/server/geometry-analytics-persist'
 import type { Json } from '@/lib/types/database'
 
 type TrialBody = {
@@ -167,6 +168,8 @@ export async function POST(request: Request) {
         )
       }
     }
+
+    await persistGeometryAnalyticsRows(sb, session.id, metadata)
 
     return NextResponse.json({ ok: true, sessionId: session.id })
   } catch (err) {

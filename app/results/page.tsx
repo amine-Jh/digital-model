@@ -40,6 +40,7 @@ import { getLatestRAVLTResult, RAVLTResult } from '@/lib/memory/ravlt'
 import { getLatestDigitSpanResult, DigitSpanResult } from '@/lib/memory/digit-span'
 import { ChartAreaSkeleton, ValueHeadlineSkeleton } from '@/components/ui/value-skeleton'
 import { Skeleton } from '@/components/ui/skeleton'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -388,10 +389,8 @@ export default function ResultsPage() {
                   <CardContent className="pt-0">
                     <div className="divide-y divide-border">
                       {tests.map((test) => (
-                        <div
-                          key={test.id}
-                          className="flex items-center justify-between gap-3 py-3"
-                        >
+                        <div key={test.id} className="py-3">
+                          <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 flex-1 items-center gap-3">
                             <div
                               className="h-2 w-2 flex-shrink-0 rounded-full"
@@ -432,6 +431,13 @@ export default function ResultsPage() {
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </div>
+                          </div>
+                          {test.status === 'completed' && test.latestGeometryAnalytics && (
+                            <GeometryAnalyticsSummary
+                              report={test.latestGeometryAnalytics}
+                              compact
+                            />
+                          )}
                         </div>
                       ))}
                     </div>

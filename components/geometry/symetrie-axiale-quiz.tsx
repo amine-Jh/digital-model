@@ -19,7 +19,9 @@ import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-comp
 import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
+import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
@@ -122,9 +124,8 @@ export function SymetrieAxialeQuiz() {
           score: t.score ?? (t.correct ? 1 : 0),
           reaction_time_ms: t.reactionTimeMs,
         })),
-        metadata: {
-          source: 'symetrie-axiale-quiz',
-          ...buildGeometrySessionMetadataFraction({
+        metadata: (() => {
+          const geoPayload = buildGeometrySessionMetadataFraction({
             lessonTestId: SYMETRIE_AXIALE_TEST_ID,
             questions: SYMETRIE_AXIALE_QUESTIONS,
             trials: r.trials.map((t) => ({
@@ -134,8 +135,25 @@ export function SymetrieAxialeQuiz() {
               correct: t.correct,
             })),
             isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
-          }),
-        },
+          })
+          const geometryAnalytics = buildGeometryAnalyticsReport({
+            testId: SYMETRIE_AXIALE_TEST_ID,
+            questions: SYMETRIE_AXIALE_QUESTIONS,
+            trials: r.trials.map((t) => ({
+              index: t.index,
+              questionId: t.questionId,
+              score: t.score ?? (t.correct ? 1 : 0),
+              correct: t.correct,
+            })),
+            isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
+            scoringMode: 'fraction',
+          })
+          return {
+            source: 'symetrie-axiale-quiz',
+            ...geoPayload,
+            geometryAnalytics,
+          }
+        })(),
       })
     }
   }, [phase, trials, startedAt, user])
@@ -428,6 +446,19 @@ function Results({ trials, onExit }: ResultsProps) {
     isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
   })
 
+  const geometryAnalytics = buildGeometryAnalyticsReport({
+    testId: SYMETRIE_AXIALE_TEST_ID,
+    questions: SYMETRIE_AXIALE_QUESTIONS,
+    trials: trials.map((t) => ({
+      index: t.index,
+      questionId: t.questionId,
+      score: t.score ?? (t.correct ? 1 : 0),
+      correct: t.correct,
+    })),
+    isScorableIndex: (i) => SYMETRIE_AXIALE_QUESTIONS[i]?.correctAnswer !== null,
+    scoringMode: 'fraction',
+  })
+
   return (
     <main className="container mx-auto max-w-2xl py-10">
       <Card className="p-8 text-center">
@@ -445,6 +476,7 @@ function Results({ trials, onExit }: ResultsProps) {
             <p className="text-2xl font-bold">{percentage}%</p>
           </div>
         </div>
+        <GeometryAnalyticsSummary report={geometryAnalytics} />
         <CapacityBreakdownCard
           testId={SYMETRIE_AXIALE_TEST_ID}
           breakdown={geo.capacityBreakdown}

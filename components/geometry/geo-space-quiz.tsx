@@ -16,11 +16,14 @@ import {
   saveGeoSpaceResult,
 } from '@/lib/geometry/geo-space'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
+import type { Json } from '@/lib/types/database'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
 import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
+import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
@@ -128,14 +131,13 @@ export function GeoSpaceQuiz() {
         trials: r.trials.map((t) => ({
           question_index: t.index,
           question_id: t.questionId,
-          selected: (t.selectedList?.length ? t.selectedList : [t.selected]) as unknown[],
+          selected: (t.selectedList?.length ? t.selectedList : [t.selected]) as Json,
           correct: t.correct,
           score: t.score ?? (t.correct ? 1 : 0),
           reaction_time_ms: t.reactionTimeMs,
         })),
-        metadata: {
-          source: 'geo-space-quiz',
-          ...buildGeometrySessionMetadataFraction({
+        metadata: (() => {
+          const geoPayload = buildGeometrySessionMetadataFraction({
             lessonTestId: GEO_SPACE_TEST_ID,
             questions: GEO_SPACE_QUESTIONS,
             trials: r.trials.map((t) => ({
@@ -145,8 +147,25 @@ export function GeoSpaceQuiz() {
               correct: t.correct,
             })),
             isScorableIndex: (i) => GEO_SPACE_QUESTIONS[i]?.correctAnswer !== null,
-          }),
-        },
+          })
+          const geometryAnalytics = buildGeometryAnalyticsReport({
+            testId: GEO_SPACE_TEST_ID,
+            questions: GEO_SPACE_QUESTIONS,
+            trials: r.trials.map((t) => ({
+              index: t.index,
+              questionId: t.questionId,
+              score: t.score ?? (t.correct ? 1 : 0),
+              correct: t.correct,
+            })),
+            isScorableIndex: (i) => GEO_SPACE_QUESTIONS[i]?.correctAnswer !== null,
+            scoringMode: 'fraction',
+          })
+          return {
+            source: 'geo-space-quiz',
+            ...geoPayload,
+            geometryAnalytics,
+          }
+        })(),
       })
     }
   }, [phase, trials, startedAt, user])
@@ -446,14 +465,18 @@ function Results({ trials, onExit }: ResultsProps) {
     isScorableIndex: (i) => GEO_SPACE_QUESTIONS[i]?.correctAnswer !== null,
   })
 
-  const coursePart = scorable.filter(
-    (t) => GEO_SPACE_QUESTIONS[t.index].part === 'course',
-  )
-  const reasoningPart = scorable.filter(
-    (t) => GEO_SPACE_QUESTIONS[t.index].part === 'reasoning',
-  )
-  const courseCorrect = coursePart.filter((t) => t.correct).length
-  const reasoningCorrect = reasoningPart.filter((t) => t.correct).length
+  const geometryAnalytics = buildGeometryAnalyticsReport({
+    testId: GEO_SPACE_TEST_ID,
+    questions: GEO_SPACE_QUESTIONS,
+    trials: trials.map((t) => ({
+      index: t.index,
+      questionId: t.questionId,
+      score: t.score ?? (t.correct ? 1 : 0),
+      correct: t.correct,
+    })),
+    isScorableIndex: (i) => GEO_SPACE_QUESTIONS[i]?.correctAnswer !== null,
+    scoringMode: 'fraction',
+  })
 
   return (
     <main className="container mx-auto max-w-2xl py-10">
@@ -469,20 +492,7 @@ function Results({ trials, onExit }: ResultsProps) {
             {correct} / {scorable.length} réponses correctes
           </div>
         </div>
-        <div className="mb-6 grid grid-cols-2 gap-4 text-sm">
-          <div className="rounded border p-3">
-            <div className="text-xs text-muted-foreground">Partie I (cours)</div>
-            <div className="text-lg font-semibold">
-              {courseCorrect} / {coursePart.length}
-            </div>
-          </div>
-          <div className="rounded border p-3">
-            <div className="text-xs text-muted-foreground">Partie II (raisonnement)</div>
-            <div className="text-lg font-semibold">
-              {reasoningCorrect} / {reasoningPart.length}
-            </div>
-          </div>
-        </div>
+        <GeometryAnalyticsSummary report={geometryAnalytics} />
         <CapacityBreakdownCard
           testId={GEO_SPACE_TEST_ID}
           breakdown={geo.capacityBreakdown}

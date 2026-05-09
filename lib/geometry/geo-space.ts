@@ -2,9 +2,9 @@
  * Géométrie dans l'espace — Cognitive Assessment Test
  * Domain: Cognition et apprentissage de la géométrie
  *
- * Structure:
- *  - Partie I  : Q1 → Q18 (Questions du cours)
- *  - Partie II : Q19 → Q21 (Questions de raisonnement)
+ * Structure (Canonique — Cognition et apprentissage de la géométrie) :
+ *  - Partie I  : Q1 → Q18 — cours et visualisation spatiale (dont M1 diagnostic)
+ *  - Partie II : Q19 → Q21 — raisonnement spatial (Q19 en trois items a/b/c)
  *
  * Competencies:
  *  C1: Connaître les axiomes / déterminer un plan
@@ -273,7 +273,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
       'Déterminer la position relative de \\( (D) \\) et le plan \\( (P) \\) :',
     options: [
       'La droite \\( (D) \\) coupe le plan \\( (P) \\) en un seul point',
-      '\\( I \\) est le point d\'intersection du plan \\( (P) \\) avec la droite \\( (D) \\)',
+      '\\( I \\) est l\'intersection du plan \\( (P) \\) et de la droite \\( (D) \\)',
       '\\( (D) \\) est orthogonale au plan \\( (P) \\) en \\( I \\)',
     ],
     correctAnswer: [0, 1],
@@ -317,7 +317,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
     id: 'Q19a',
     competencies: ['C1', 'C2'],
     question:
-      'Voir la figure ci-dessous. Le point d\'intersection du plan \\( (ILB) \\) et du plan \\( (DCG) \\) est :',
+      'Voir la figure ci-dessous. L\'intersection du plan \\( (ILB) \\) et du plan \\( (DCG) \\) est :',
     options: [
       'Le point \\( C \\)',
       'La droite \\( (CG) \\)',
@@ -332,7 +332,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
     id: 'Q19b',
     competencies: ['C1', 'C2'],
     question:
-      'Voir la figure ci-dessous. Le point d\'intersection du plan \\( (ABC) \\) et du plan \\( (BCG) \\) est :',
+      'Voir la figure ci-dessous. L\'intersection du plan \\( (ABC) \\) et du plan \\( (BCG) \\) est :',
     options: [
       'La droite \\( (BC) \\)',
       'La droite \\( (AB) \\)',
@@ -347,7 +347,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
     id: 'Q19c',
     competencies: ['C1', 'C2'],
     question:
-      'Voir la figure ci-dessous. Le point d\'intersection de la droite \\( (CG) \\) et du plan \\( (ABD) \\) est :',
+      'Voir la figure ci-dessous. L\'intersection de la droite \\( (CG) \\) et du plan \\( (ABD) \\) est le point :',
     options: [
       '\\( C \\)',
       '\\( A \\)',
@@ -377,7 +377,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
     id: 'Q21',
     competencies: ['C2', 'C3'],
     question:
-      '\\( ABCD \\) est un tétraèdre. \\( I \\in (AB) \\) et \\( J \\in (ACD) \\). Le point d\'intersection de la droite \\( (IJ) \\) et du plan \\( (BCD) \\) est :',
+      '\\( ABCD \\) est un tétraèdre. \\( I \\in (AB) \\) et \\( J \\in (ACD) \\). L\'intersection de la droite \\( (IJ) \\) et du plan \\( (BCD) \\) est :',
     options: ['\\( E \\)', '\\( F \\)'],
     correctAnswer: [0, 1],
     requiresImage: true,

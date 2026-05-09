@@ -39,7 +39,9 @@ import {
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataPoints } from '@/lib/geometry/capacity-results'
+import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
@@ -170,6 +172,21 @@ export function SymetrieCentraleQuiz() {
       },
       totalPercent: totalPct,
     })
+    const geometryAnalytics = buildGeometryAnalyticsReport({
+      testId: SYMETRIE_CENTRALE_TEST_ID,
+      questions: SYMETRIE_CENTRALE_QUESTIONS,
+      trials: trials.map((t) => ({
+        index: t.index,
+        questionId: t.questionId,
+        correct: t.correct,
+        pointsEarned: t.pointsEarned,
+      })),
+      isScorableIndex: (i) => {
+        const q = SYMETRIE_CENTRALE_QUESTIONS[i]
+        return Boolean(q && !q.isDiagnostic && q.points > 0)
+      },
+      scoringMode: 'points',
+    })
     const r: SymCentraleResult = {
       id: `symc-${Date.now()}`,
       userName: user?.username,
@@ -202,7 +219,12 @@ export function SymetrieCentraleQuiz() {
         score: t.correct ? 1 : Math.min(1, t.pointsEarned / 4),
         reaction_time_ms: t.reactionTimeMs,
       })),
-      metadata: { source: 'symetrie-centrale-quiz', level: r.level, ...geoPayload },
+      metadata: {
+        source: 'symetrie-centrale-quiz',
+        level: r.level,
+        ...geoPayload,
+        geometryAnalytics,
+      },
     })
   }, [phase, trials, startedAt, user])
 
@@ -717,6 +739,22 @@ function Results({
     },
   }
 
+  const geometryAnalytics = buildGeometryAnalyticsReport({
+    testId: SYMETRIE_CENTRALE_TEST_ID,
+    questions: SYMETRIE_CENTRALE_QUESTIONS,
+    trials: trials.map((t) => ({
+      index: t.index,
+      questionId: t.questionId,
+      correct: t.correct,
+      pointsEarned: t.pointsEarned,
+    })),
+    isScorableIndex: (i) => {
+      const q = SYMETRIE_CENTRALE_QUESTIONS[i]
+      return Boolean(q && !q.isDiagnostic && q.points > 0)
+    },
+    scoringMode: 'points',
+  })
+
   return (
     <main className="container mx-auto max-w-2xl py-10">
       <Card className="p-8 text-center">
@@ -732,6 +770,8 @@ function Results({
           </div>
           <div className="mt-1 text-sm text-muted-foreground">Score global (points)</div>
         </div>
+
+        <GeometryAnalyticsSummary report={geometryAnalytics} />
 
         <CapacityBreakdownCard
           testId={SYMETRIE_CENTRALE_TEST_ID}

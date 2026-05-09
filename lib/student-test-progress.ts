@@ -6,6 +6,10 @@
 
 import type { Test } from '@/lib/mock-data'
 import type { Database } from '@/lib/types/database'
+import {
+  parseGeometryAnalyticsReport,
+  type GeometryAnalyticsReport,
+} from '@/lib/geometry/geometry-analytics-report'
 
 export type SessionStatus = Database['public']['Tables']['test_sessions']['Row']['status']
 
@@ -16,6 +20,8 @@ export type TestWithProgress = Test & {
   latestScore: number | null
   /** Latest session id when useful for links/debug. */
   latestSessionId?: string
+  /** Structured geometry breakdown (parts + Cₖ) when present on the session row. */
+  latestGeometryAnalytics?: GeometryAnalyticsReport | null
 }
 
 type SessionRow = Database['public']['Tables']['test_sessions']['Row']
@@ -141,15 +147,22 @@ export function mergeCatalogWithSessions(
         ...t,
         status: 'upcoming',
         latestScore: null,
+        latestGeometryAnalytics: null,
       }
     }
     const status = rowToUiStatus(row)
     const latestScore = status === 'completed' ? resolveSessionScorePercent(row) : null
+    const meta = row.metadata as Record<string, unknown> | null | undefined
+    const latestGeometryAnalytics =
+      meta && typeof meta.geometryAnalytics === 'object'
+        ? parseGeometryAnalyticsReport(meta.geometryAnalytics)
+        : null
     return {
       ...t,
       status,
       latestScore,
       latestSessionId: row.id,
+      latestGeometryAnalytics,
     }
   })
 }

@@ -257,6 +257,78 @@ export interface Database {
         Update: Partial<MetricsRow>
         Relationships: []
       }
+
+      geometry_session_part_scores: {
+        Row: {
+          id: string
+          session_id: string
+          part_number: number
+          part_label: string | null
+          earned: number
+          max_points: number
+          percent: number | null
+          score_out_of_20: number | null
+          correct_count: number
+          total_scorable: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          part_number: number
+          part_label?: string | null
+          earned?: number
+          max_points?: number
+          percent?: number | null
+          score_out_of_20?: number | null
+          correct_count?: number
+          total_scorable?: number
+          created_at?: string
+        }
+        Update: Partial<{
+          part_label: string | null
+          earned: number
+          max_points: number
+          percent: number | null
+          score_out_of_20: number | null
+          correct_count: number
+          total_scorable: number
+        }>
+        Relationships: []
+      }
+
+      geometry_session_capacity_scores: {
+        Row: {
+          id: string
+          session_id: string
+          ck_code: string
+          ck_name: string | null
+          earned: number
+          max_points: number
+          percent: number | null
+          score_out_of_20: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          ck_code: string
+          ck_name?: string | null
+          earned?: number
+          max_points?: number
+          percent?: number | null
+          score_out_of_20?: number | null
+          created_at?: string
+        }
+        Update: Partial<{
+          ck_name: string | null
+          earned: number
+          max_points: number
+          percent: number | null
+          score_out_of_20: number | null
+        }>
+        Relationships: []
+      }
     }
     Views: {
       my_students: {

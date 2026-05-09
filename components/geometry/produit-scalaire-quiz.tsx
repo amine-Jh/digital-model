@@ -23,7 +23,9 @@ import { InteractiveLinePlot, PlottedPoint } from '@/components/geometry/interac
 import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
+import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
@@ -168,9 +170,8 @@ export function ProduitScalaireQuiz() {
           score: t.score ?? (t.correct ? 1 : 0),
           reaction_time_ms: t.reactionTimeMs,
         })),
-        metadata: {
-          source: 'produit-scalaire-quiz',
-          ...buildGeometrySessionMetadataFraction({
+        metadata: (() => {
+          const geoPayload = buildGeometrySessionMetadataFraction({
             lessonTestId: PRODUIT_SCALAIRE_TEST_ID,
             questions: PRODUIT_SCALAIRE_QUESTIONS.map((q) => ({
               id: q.id,
@@ -192,8 +193,33 @@ export function ProduitScalaireQuiz() {
                 !q.interactiveLine
               )
             },
-          }),
-        },
+          })
+          const geometryAnalytics = buildGeometryAnalyticsReport({
+            testId: PRODUIT_SCALAIRE_TEST_ID,
+            questions: PRODUIT_SCALAIRE_QUESTIONS,
+            trials: r.trials.map((t) => ({
+              index: t.index,
+              questionId: t.questionId,
+              score: t.score ?? (t.correct ? 1 : 0),
+              correct: t.correct,
+            })),
+            isScorableIndex: (i) => {
+              const q = PRODUIT_SCALAIRE_QUESTIONS[i]
+              return (
+                q?.correctAnswer !== null &&
+                !q.isDiagnostic &&
+                !q.isOpenEnded &&
+                !q.interactiveLine
+              )
+            },
+            scoringMode: 'fraction',
+          })
+          return {
+            source: 'produit-scalaire-quiz',
+            ...geoPayload,
+            geometryAnalytics,
+          }
+        })(),
       })
     }
   }, [phase, trials, startedAt, user])
@@ -600,6 +626,27 @@ function Results({ trials, onExit }: ResultsProps) {
     },
   })
 
+  const geometryAnalytics = buildGeometryAnalyticsReport({
+    testId: PRODUIT_SCALAIRE_TEST_ID,
+    questions: PRODUIT_SCALAIRE_QUESTIONS,
+    trials: trials.map((t) => ({
+      index: t.index,
+      questionId: t.questionId,
+      score: t.score ?? (t.correct ? 1 : 0),
+      correct: t.correct,
+    })),
+    isScorableIndex: (i) => {
+      const q = PRODUIT_SCALAIRE_QUESTIONS[i]
+      return (
+        q?.correctAnswer !== null &&
+        !q.isDiagnostic &&
+        !q.isOpenEnded &&
+        !q.interactiveLine
+      )
+    },
+    scoringMode: 'fraction',
+  })
+
   const openCount = trials.filter(
     (t) => PRODUIT_SCALAIRE_QUESTIONS[t.index].isOpenEnded,
   ).length
@@ -624,6 +671,8 @@ function Results({ trials, onExit }: ResultsProps) {
             </div>
           )}
         </div>
+
+        <GeometryAnalyticsSummary report={geometryAnalytics} />
 
         <h3 className="mb-2 text-left text-sm font-semibold text-muted-foreground">
           Par partie

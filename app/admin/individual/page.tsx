@@ -14,6 +14,7 @@ import {
 } from '@/lib/admin-results'
 import { formatCapacityGlyph } from '@/lib/geometry/capacity-definitions'
 import { asciiCompetencyKey } from '@/lib/geometry-mcq'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 
 function color(v: number) {
   if (v < 0) return 'text-slate-500'
@@ -226,6 +227,14 @@ export default function IndividualResultsPage() {
                               test).
                             </p>
                           ) : null}
+                          {student.geometryAnalyticsByTest?.[t.testId] && (
+                            <div className="mt-2 text-left">
+                              <GeometryAnalyticsSummary
+                                report={student.geometryAnalyticsByTest[t.testId]}
+                                compact
+                              />
+                            </div>
+                          )}
                         </div>
                       )
                     })}
