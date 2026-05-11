@@ -180,6 +180,21 @@ export interface Database {
         Relationships: []
       }
 
+      students: {
+        Row: {
+          id: number
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          created_at?: string
+        }
+        Update: {
+          created_at?: string
+        }
+        Relationships: []
+      }
+
       tests: {
         Row: {
           id: string

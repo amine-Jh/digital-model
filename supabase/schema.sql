@@ -162,6 +162,14 @@ create trigger trg_student_profiles_touch
   for each row execute function public.touch_updated_at();
 
 -- -----------------------------------------------------------------------------
+-- students  (legacy compatibility table from existing Supabase exports)
+-- -----------------------------------------------------------------------------
+create table if not exists public.students (
+  id          bigint generated always as identity primary key,
+  created_at  timestamptz not null default now()
+);
+
+-- -----------------------------------------------------------------------------
 -- tests  (catalogue — referenced by test_sessions.test_id)
 -- -----------------------------------------------------------------------------
 create table if not exists public.tests (
@@ -246,6 +254,46 @@ create table if not exists public.trial_results (
 );
 
 create index if not exists trial_results_session_idx on public.trial_results (session_id, question_index);
+
+-- -----------------------------------------------------------------------------
+-- geometry_session_part_scores  (normalized geometry analytics by part)
+-- -----------------------------------------------------------------------------
+create table if not exists public.geometry_session_part_scores (
+  id                uuid primary key default gen_random_uuid(),
+  session_id        uuid not null references public.test_sessions(id) on delete cascade,
+  part_number       smallint not null check (part_number >= 1 and part_number <= 3),
+  part_label        text,
+  earned            numeric not null default 0,
+  max_points        numeric not null default 0,
+  percent           numeric,
+  score_out_of_20   numeric,
+  correct_count     int not null default 0,
+  total_scorable    int not null default 0,
+  created_at        timestamptz not null default now(),
+  unique (session_id, part_number)
+);
+
+create index if not exists geometry_part_session_idx
+  on public.geometry_session_part_scores (session_id);
+
+-- -----------------------------------------------------------------------------
+-- geometry_session_capacity_scores  (normalized geometry analytics by capacity)
+-- -----------------------------------------------------------------------------
+create table if not exists public.geometry_session_capacity_scores (
+  id                uuid primary key default gen_random_uuid(),
+  session_id        uuid not null references public.test_sessions(id) on delete cascade,
+  ck_code           text not null,
+  ck_name           text,
+  earned            numeric not null default 0,
+  max_points        numeric not null default 0,
+  percent           numeric,
+  score_out_of_20   numeric,
+  created_at        timestamptz not null default now(),
+  unique (session_id, ck_code)
+);
+
+create index if not exists geometry_cap_session_idx
+  on public.geometry_session_capacity_scores (session_id);
 
 -- -----------------------------------------------------------------------------
 -- metrics  (longitudinal aggregates — refreshed nightly or on insert).

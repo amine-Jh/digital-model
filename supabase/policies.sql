@@ -216,6 +216,79 @@ create policy tr_admin_all on public.trial_results
   for all using (public.is_admin()) with check (public.is_admin());
 
 -- -----------------------------------------------------------------------------
+-- geometry_session_part_scores + geometry_session_capacity_scores
+-- children of test_sessions — same access rules as trial_results
+-- -----------------------------------------------------------------------------
+alter table public.geometry_session_part_scores enable row level security;
+alter table public.geometry_session_capacity_scores enable row level security;
+
+drop policy if exists gpart_self_select   on public.geometry_session_part_scores;
+drop policy if exists gpart_self_insert  on public.geometry_session_part_scores;
+drop policy if exists gpart_teacher_read on public.geometry_session_part_scores;
+drop policy if exists gpart_admin_all    on public.geometry_session_part_scores;
+
+create policy gpart_self_select on public.geometry_session_part_scores
+  for select using (
+    exists (
+      select 1 from public.test_sessions s
+      where s.id = geometry_session_part_scores.session_id and s.user_id = auth.uid()
+    )
+  );
+
+create policy gpart_self_insert on public.geometry_session_part_scores
+  for insert with check (
+    exists (
+      select 1 from public.test_sessions s
+      where s.id = geometry_session_part_scores.session_id and s.user_id = auth.uid()
+    )
+  );
+
+create policy gpart_teacher_read on public.geometry_session_part_scores
+  for select using (
+    public.is_teacher()
+    and exists (
+      select 1 from public.test_sessions s
+      where s.id = geometry_session_part_scores.session_id and public.is_my_student(s.user_id)
+    )
+  );
+
+create policy gpart_admin_all on public.geometry_session_part_scores
+  for all using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists gcap_self_select   on public.geometry_session_capacity_scores;
+drop policy if exists gcap_self_insert  on public.geometry_session_capacity_scores;
+drop policy if exists gcap_teacher_read on public.geometry_session_capacity_scores;
+drop policy if exists gcap_admin_all    on public.geometry_session_capacity_scores;
+
+create policy gcap_self_select on public.geometry_session_capacity_scores
+  for select using (
+    exists (
+      select 1 from public.test_sessions s
+      where s.id = geometry_session_capacity_scores.session_id and s.user_id = auth.uid()
+    )
+  );
+
+create policy gcap_self_insert on public.geometry_session_capacity_scores
+  for insert with check (
+    exists (
+      select 1 from public.test_sessions s
+      where s.id = geometry_session_capacity_scores.session_id and s.user_id = auth.uid()
+    )
+  );
+
+create policy gcap_teacher_read on public.geometry_session_capacity_scores
+  for select using (
+    public.is_teacher()
+    and exists (
+      select 1 from public.test_sessions s
+      where s.id = geometry_session_capacity_scores.session_id and public.is_my_student(s.user_id)
+    )
+  );
+
+create policy gcap_admin_all on public.geometry_session_capacity_scores
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- -----------------------------------------------------------------------------
 -- metrics  (read-only for owner / teacher / admin; writes only via service role)
 -- -----------------------------------------------------------------------------
 alter table public.metrics enable row level security;
