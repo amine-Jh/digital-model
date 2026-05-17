@@ -25,9 +25,13 @@ export interface VectorsQuestion {
   /** When true, students can click on the figure to place named points; the
    *  selection is recorded but not auto-graded (kept for review). */
   pointPlacement?: { count: number; labels: string[] }
+  /** When set with pointPlacement, auto-grade clicks against these lattice coords. */
+  placementExpected?: { name: string; x: number; y: number }[]
   /** When set, the question collects numeric collinearity coefficients
    *  using inline inputs (not auto-graded). */
   fillIn?: { fields: { label: string; expected?: string }[] }
+  /** When true with fillIn, auto-grade numeric answers (order-sensitive). */
+  fillGraded?: boolean
   part: 'autoeval' | 'course' | 'autoeval2' | 'construction' | 'autoeval3' | 'reasoning'
   correction?: string
 }
@@ -190,10 +194,10 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       '\\( B \\) est le milieu de \\( [AG] \\)',
       'J\'ai oublié'
     ],
-    correctAnswer: [0, 1],
+    correctAnswer: 0,
     requiresImage: false,
     part: 'course',
-    correction: 'Réponses correctes: A, B'
+    correction: 'Réponse correcte: A'
   },
   // ─── Partie II : Application sur la figure (Q8 → Q18) ──────────────────────
   // All Q8 → Q18 questions share the same static figure: vecteurs.png.
@@ -209,11 +213,11 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       '\\( \\vec{DE} \\) et \\( \\vec{F\'F} \\) sont opposés',
       '\\( \\vec{DE} = \\vec{FF\'} \\)',
     ],
-    correctAnswer: [1, 3, 4],
+    correctAnswer: [2, 3, 4],
     requiresImage: true,
     imagePath: '/images/geometry/vectors/vecteurs.png',
     part: 'construction',
-    correction: 'Réponses correctes : B, D, E',
+    correction: 'Réponses correctes : C, D, E',
   },
   {
     id: 'Q9',
@@ -226,8 +230,9 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     imagePath: '/images/geometry/vectors/vecteurs.png',
     showCoordPlane: true,
     pointPlacement: { count: 1, labels: ['I'] },
+    placementExpected: [{ name: 'I', x: 1, y: 1 }],
     part: 'construction',
-    correction: 'Réponse attendue : \\( I(6\\,;\\,8) \\)',
+    correction: 'Réponse attendue : \\( I(1\\,;\\,1) \\)',
   },
   {
     id: 'Q10',
@@ -240,8 +245,12 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     imagePath: '/images/geometry/vectors/vecteurs.png',
     showCoordPlane: true,
     pointPlacement: { count: 2, labels: ['M', 'Q'] },
+    placementExpected: [
+      { name: 'M', x: 11, y: 7 },
+      { name: 'Q', x: 7, y: -3 },
+    ],
     part: 'construction',
-    correction: 'Réponse attendue : \\( M(11\\,;\\,7) \\) et \\( Q(6\\,;\\,4) \\)',
+    correction: 'Réponses attendues : \\( M(11\\,;\\,7) \\), \\( Q(7\\,;\\,-3) \\)',
   },
   {
     id: 'Q11',
@@ -254,20 +263,24 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     imagePath: '/images/geometry/vectors/vecteurs.png',
     showCoordPlane: true,
     pointPlacement: { count: 2, labels: ['N', 'P'] },
+    placementExpected: [
+      { name: 'N', x: 3, y: -3 },
+      { name: 'P', x: 10, y: 6 },
+    ],
     part: 'construction',
-    correction: 'Réponse attendue : \\( N(7\\,;\\,4) \\) et \\( P(10\\,;\\,6) \\)',
+    correction: 'Réponses attendues : \\( N(3\\,;\\,-3) \\), \\( P(10\\,;\\,6) \\)',
   },
   {
     id: 'Q12',
     competencies: ['C1'],
     question: 'Donner les parallélogrammes présents dans la figure :',
     options: ['ABDC', 'DEFF\'', 'BC\'GH', 'ABHG'],
-    correctAnswer: [0, 2, 3],
+    correctAnswer: [0],
     requiresImage: true,
     // Q12 reads the same coordinate system (O, I, J) as Q9-Q11.
     showCoordPlane: true,
     part: 'construction',
-    correction: 'Réponses correctes : A, C, D',
+    correction: 'Réponse correcte : A',
   },
   {
     id: 'Q13',
@@ -311,11 +324,11 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       '\\( \\vec{AN} + \\vec{GN} = \\vec{0} \\)',
       '\\( \\vec{AN} = \\vec{NG} \\)',
     ],
-    correctAnswer: [1, 2],
+    correctAnswer: 1,
     requiresImage: true,
     imagePath: '/images/geometry/vectors/vecteurs.png',
     part: 'construction',
-    correction: 'Réponses correctes : B, C',
+    correction: 'Réponse correcte : B',
   },
   {
     id: 'Q16',
@@ -323,11 +336,11 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     question:
       'Image du point \\( E \\) par la translation de vecteur \\( \\vec{C\'H} \\) :',
     options: ['\\( D \\)', '\\( F\' \\)', '\\( E \\)', '\\( C \\)'],
-    correctAnswer: 0,
+    correctAnswer: 1,
     requiresImage: true,
     imagePath: '/images/geometry/vectors/vecteurs.png',
     part: 'construction',
-    correction: 'Réponse correcte : A',
+    correction: 'Réponse correcte : B',
   },
   {
     id: 'Q17',
@@ -336,7 +349,8 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       'Image du point \\( C \\) par la translation de vecteur \\( \\vec{AB} \\) :',
     options: ['\\( C\' \\)', '\\( D \\)', '\\( E \\)', '\\( A \\)'],
     correctAnswer: 0,
-    requiresImage: false,
+    requiresImage: true,
+    imagePath: '/images/geometry/vectors/vecteurs.png',
     part: 'construction',
     correction: 'Réponse correcte : A',
   },
@@ -352,12 +366,13 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     fillIn: {
       fields: [
         { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MP} \\)', expected: '-3' },
-        { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MN} \\)', expected: '4/3' },
-        { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MS} \\)', expected: '5/3' },
+        { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MN} \\)', expected: '3/4' },
+        { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MS} \\)', expected: '3/5' },
       ],
     },
+    fillGraded: true,
     part: 'construction',
-    correction: 'Réponses attendues : -3, 4/3, 5/3',
+    correction: 'Réponses attendues (dans l\'ordre) : \\(-3\\), \\(\\tfrac{3}{4}\\), \\(\\tfrac{3}{5}\\)',
   },
   {
     id: 'AutoEval-3',

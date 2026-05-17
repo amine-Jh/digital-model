@@ -133,7 +133,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
   },
   {
     id: 'Q6',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question:
       'Si deux plans \\( (P) \\) et \\( (P\') \\) sont parallèles, tout plan \\( (Q) \\) parallèle à l\'un des deux plans est parallèle à l\'autre plan. Quelle figure représente cette propriété ?',
     options: ['Figure 1', 'Figure 2'],
@@ -158,7 +158,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
   },
   {
     id: 'Q8',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question: 'Deux plans \\( (P) \\) et \\( (P\') \\) sont parallèles. Alors :',
     options: [
       'toute droite \\( (D) \\) qui coupe l\'un des deux plans coupe aussi l\'autre',
@@ -239,7 +239,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
   },
   {
     id: 'Q14',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question: 'Déterminer la position relative de \\( (D) \\) et \\( (P) \\) :',
     options: [
       '\\( (D) \\) et \\( (D\') \\) sont parallèles',
@@ -253,7 +253,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
   },
   {
     id: 'Q15',
-    competencies: ['C1', 'C2'],
+    competencies: ['C2'],
     question:
       '\\( (D) \\) est orthogonale à \\( (P) \\) et \\( (D\') \\) est incluse dans \\( (P) \\). Déterminer les positions relatives de \\( (D) \\) et \\( (D\') \\) :',
     options: [
@@ -276,7 +276,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
       '\\( I \\) est l\'intersection du plan \\( (P) \\) et de la droite \\( (D) \\)',
       '\\( (D) \\) est orthogonale au plan \\( (P) \\) en \\( I \\)',
     ],
-    correctAnswer: [0, 1],
+    correctAnswer: [0, 2],
     requiresImage: true,
     imagePath: '/images/geometry/geo-space/q16.png',
     part: 'course',
@@ -298,7 +298,7 @@ export const GEO_SPACE_QUESTIONS: GeoSpaceQuestion[] = [
   },
   {
     id: 'Q18',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question:
       'Déterminer la position relative de la droite \\( (D) \\) et le plan \\( (P) \\) comme figurée sur la photo ci-dessous :',
     options: [

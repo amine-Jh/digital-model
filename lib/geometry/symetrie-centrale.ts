@@ -347,11 +347,13 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     competency: 'C2',
     kind: 'image-choice',
     question:
-      'Soit \\( ABC \\) un triangle équilatéral tel que \\( AB = 6\\,\\mathrm{cm} \\). Soient \\( E \\) le milieu de \\( [AC] \\), \\( G \\) le milieu de \\( [AB] \\), \\( K \\) le milieu de \\( [BC] \\). On note \\( B\' \\) le symétrique de \\( B \\) par rapport à \\( E \\), \\( A\' \\) le symétrique de \\( A \\) par rapport à \\( K \\), et \\( C\' \\) le symétrique de \\( C \\) par rapport à \\( G \\). Choisir la figure qui représente correctement la construction.',
-    options: ['Symétrique 1', 'Symétrique 2'],
+      'Soit \\( ABC \\) un triangle équilatéral tel que \\( AB = 6 \\). Soient \\( I \\) le milieu de \\( [AC] \\), \\( J \\) le milieu de \\( [AB] \\), \\( K \\) le milieu de \\( [BC] \\). On note \\( B\' \\) le symétrique de \\( B \\) par rapport à \\( I \\), \\( A\' \\) le symétrique de \\( A \\) par rapport à \\( K \\), et \\( C\' \\) le symétrique de \\( C \\) par rapport à \\( J \\). Choisir la figure qui représente correctement la construction.',
+    options: ['Figure A', 'Figure B', 'Figure C', 'Figure D'],
     optionImages: [
       '/images/geometry/symetrie-centrale/q16-option-1.png',
       '/images/geometry/symetrie-centrale/q16-option-2.png',
+      '/images/geometry/symetrie-centrale/q16-option-3.png',
+      '/images/geometry/symetrie-centrale/q16-option-4.png',
     ],
     correctAnswer: 0,
     points: 2,

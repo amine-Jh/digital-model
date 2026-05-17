@@ -38,8 +38,7 @@ export interface RotationQuestion {
 }
 
 function rotationImagePath(questionNumber: number): string {
-  if (questionNumber >= 9) return `/rotation/rotation (${questionNumber}).jpg`
-  return `/rotation/Rotation (${questionNumber}).png`
+  return `/rotation/rotation (${questionNumber}).jpg`
 }
 
 export const rotationQuestions: RotationQuestion[] = Array.from(

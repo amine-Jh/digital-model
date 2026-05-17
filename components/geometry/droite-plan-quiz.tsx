@@ -72,6 +72,9 @@ export function DroitePlanQuiz() {
     if (selectedList.length === 0) return
     const q = DROITE_PLAN_QUESTIONS[current]
 
+    const multi =
+      Array.isArray(q.correctAnswer) && (q.correctAnswer as number[]).length > 1
+
     const score = scoreGeometryQuestion({
       options: q.options,
       selected: selectedList,
@@ -81,7 +84,7 @@ export function DroitePlanQuiz() {
     const trial: DroitePlanTrialResult = {
       index: current,
       questionId: q.id,
-      selected: selectedList[0],
+      selected: multi ? [...selectedList] : selectedList[0],
       correct: score === 1,
       score,
       reactionTimeMs: Date.now() - trialStart.current,
@@ -128,7 +131,7 @@ export function DroitePlanQuiz() {
         trials: r.trials.map((t) => ({
           question_index: t.index,
           question_id: t.questionId,
-          selected: [t.selected],
+          selected: Array.isArray(t.selected) ? t.selected : [t.selected],
           correct: t.correct,
           score: t.score ?? (t.correct ? 1 : 0),
           reaction_time_ms: t.reactionTimeMs,
@@ -220,9 +223,9 @@ function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void })
           <CapacityLegend testId={DROITE_PLAN_TEST_ID} />
         </div>
         <div className="mb-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          <strong>Structure :</strong> 12 questions —
-          Partie I (Q1–Q5) cours, Partie II (Q6–Q8) construction,
-          Partie III (Q9–Q12) raisonnement.
+          <strong>Structure :</strong> 13 questions —
+          Partie I (Q1–Q6) cours, Partie II (Q7–Q9) construction,
+          Partie III (Q10–Q13) raisonnement.
           La Q1 est une auto-évaluation et n&apos;est pas notée.
         </div>
         <div className="mb-6 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
@@ -261,7 +264,8 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
             <strong>4.</strong> Cliquez « Valider » pour passer à la question suivante.
           </li>
           <li>
-            <strong>5.</strong> Le score final est calculé sur les Q2 → Q12 (Q1 exclue).
+            <strong>5.</strong> Le score final est calculé sur les Q2 → Q13 (Q1 exclue).
+            Certaines questions (ex. Q2) admettent plusieurs bonnes réponses.
           </li>
         </ol>
         <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">

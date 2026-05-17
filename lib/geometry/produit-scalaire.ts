@@ -116,12 +116,12 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     competencies: ['C1'],
     question: "Si l'un des vecteurs \\( \\vec{U} \\), \\( \\vec{V} \\) est nul :",
     options: [
-      '\\( \\vec{U} \\cdot \\vec{V} = 0 \\)',
       '\\( \\vec{U} \\cdot \\vec{V} = \\vec{0} \\)',
+      '\\( \\vec{U} \\cdot \\vec{V} = 0 \\)',
       '\\( \\vec{U} \\) et \\( \\vec{V} \\) sont orthogonaux',
       "J'ai oublié",
     ],
-    correctAnswer: 0,
+    correctAnswer: 1,
   },
   {
     id: 'T1-D1-Q4',
@@ -133,7 +133,6 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     options: [
       '\\( \\vec{U} \\cdot \\vec{V} = 1 \\)',
       '\\( \\vec{U} \\cdot \\vec{V} = 0 \\)',
-      '\\( \\vec{U} \\cdot \\vec{V} = \\vec{0} \\)',
       '\\( \\vec{U} \\) ou \\( \\vec{V} \\) est nul',
       "J'ai oublié",
     ],
@@ -235,8 +234,8 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     competencies: ['C2'],
     question:
       'Calculer \\( \\vec{U}\\cdot\\vec{V} \\) à partir des coordonnées lues sur la figure :',
-    options: ['\\( 8 \\)', '\\( -8 \\)', '\\( 10 \\)'],
-    correctAnswer: 0,
+    options: ['\\( 8 \\)', '\\( -8 \\)', '\\( 10 \\)', '\\( 12 \\)'],
+    correctAnswer: 3,
     imagePath: '/images/geometry/produit scalaire/repere main.png',
   },
   {
@@ -245,11 +244,13 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     typeCode: 2,
     lessonCode: 1,
     competencies: ['C5'],
-    question: 'Calculer \\( \\cos(\\widehat{(\\vec{a},\\vec{w})}) \\) :',
+    question:
+      'Déduire \\( \\cos(\\widehat{(\\vec{OE},\\vec{OC})}) \\) en utilisant \\( \\vec{OE}\\cdot\\vec{OC} = \\|\\vec{OE}\\|\\,\\|\\vec{OC}\\|\\cos(\\widehat{(\\vec{OE},\\vec{OC})}) = xx\' + yy\' \\). Sachant que \\( \\vec{OE} = (10,6) \\) et \\( \\vec{OC} = (3,0) \\) :',
     options: [
+      '\\( \\dfrac{5\\sqrt{34}}{34} \\)',
       '\\( \\dfrac{9}{\\sqrt{34}} \\)',
       '\\( \\dfrac{9\\sqrt{34}}{34} \\)',
-      '\\( \\dfrac{3}{\\sqrt{34}} \\)',
+      'Aucune réponse',
     ],
     correctAnswer: 0,
     imagePath: '/images/geometry/produit scalaire/repere main.png',
@@ -305,7 +306,7 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     lessonCode: 2,
     competencies: ['C5'],
     question:
-      'Placer deux points dans le repère et tracer la droite d\'équation \\( x + y - 1 = 0 \\). La droite correcte passe obligatoirement par \\( (2,-1) \\) et \\( (0,1) \\).',
+      'Placer deux points dans le repère et tracer la droite d\'équation \\( x + y - 1 = 0 \\). La correction vérifie automatiquement que la droite tracée est bien \\( (\\Delta) \\) (droite complète dans le repère).',
     options: [],
     correctAnswer: null,
     interactiveLine: {
@@ -346,7 +347,7 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     lessonCode: 2,
     competencies: ['C5'],
     question:
-      'Placer deux points dans le repère et tracer la droite \\( \\Delta:\\ 2x - 3y + 2 = 0 \\). La droite correcte passe obligatoirement par \\( (-1,0) \\) et \\( (2,2) \\).',
+      'Placer deux points dans le repère et tracer la droite \\( \\Delta:\\ 2x - 3y + 2 = 0 \\). La correction vérifie automatiquement que la droite tracée est bien \\( (\\Delta) \\) (droite complète dans le repère).',
     options: [],
     correctAnswer: null,
     interactiveLine: {
@@ -387,11 +388,11 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
       "Équation de la droite passant par l'origine et perpendiculaire à \\( \\Delta \\) :",
     options: [
       '\\( x + 2y = 0 \\)',
-      '\\( 3x + 2y = 0 \\)',
-      '\\( y = -\\tfrac{3}{2} \\)',
+      '\\( 2x + 3y = 0 \\)',
+      '\\( y = -\\dfrac{3}{2}x \\)',
       'Je ne sais pas',
     ],
-    correctAnswer: 1,
+    correctAnswer: 2,
   },
   {
     id: 'T3-D2-Q22',

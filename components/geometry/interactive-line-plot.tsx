@@ -149,17 +149,41 @@ export function InteractiveLinePlot({
           y
         </text>
 
-        {/* Drawn line */}
-        {points.length === 2 && (
-          <line
-            x1={sx(points[0].x)}
-            y1={sy(points[0].y)}
-            x2={sx(points[1].x)}
-            y2={sy(points[1].y)}
-            stroke="#2563eb"
-            strokeWidth={2.2}
-          />
-        )}
+        {/* Drawn line — extended through the full viewport */}
+        {points.length === 2 && (() => {
+          const [p0, p1] = points
+          const dx = p1.x - p0.x
+          const dy = p1.y - p0.y
+          if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return null
+          const tVals: number[] = []
+          const addT = (t: number) => {
+            if (Number.isFinite(t)) tVals.push(t)
+          }
+          if (Math.abs(dx) > 1e-9) {
+            addT((xMin - p0.x) / dx)
+            addT((xMax - p0.x) / dx)
+          }
+          if (Math.abs(dy) > 1e-9) {
+            addT((yMin - p0.y) / dy)
+            addT((yMax - p0.y) / dy)
+          }
+          const tMin = Math.min(...tVals)
+          const tMax = Math.max(...tVals)
+          const x1 = p0.x + tMin * dx
+          const y1 = p0.y + tMin * dy
+          const x2 = p0.x + tMax * dx
+          const y2 = p0.y + tMax * dy
+          return (
+            <line
+              x1={sx(x1)}
+              y1={sy(y1)}
+              x2={sx(x2)}
+              y2={sy(y2)}
+              stroke="#2563eb"
+              strokeWidth={2.2}
+            />
+          )
+        })()}
 
         {/* Plotted points */}
         {points.map((p, i) => (

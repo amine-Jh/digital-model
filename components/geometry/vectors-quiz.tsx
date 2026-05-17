@@ -29,10 +29,63 @@ import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-s
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
+function parsePlacementsFromFreeText(freeText: string): { name: string; x: number; y: number }[] {
+  const out: { name: string; x: number; y: number }[] = []
+  const re = /(\w+)\((-?\d+)\s*;\s*(-?\d+)\)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(freeText)) != null) {
+    out.push({ name: m[1], x: Number(m[2]), y: Number(m[3]) })
+  }
+  return out
+}
+
+function scorePlacements(
+  freeText: string,
+  expected: { name: string; x: number; y: number }[],
+): number {
+  const got = parsePlacementsFromFreeText(freeText)
+  if (got.length < expected.length) return 0
+  let ok = 0
+  for (const e of expected) {
+    const g = got.find((p) => p.name === e.name)
+    if (g && g.x === e.x && g.y === e.y) ok++
+  }
+  return ok / expected.length
+}
+
+function normNumericInput(s: string): number | null {
+  const t = s.trim().replace(',', '.').replace(/\s+/g, '')
+  if (!t) return null
+  if (t.includes('/')) {
+    const [a, b] = t.split('/')
+    const na = Number(a)
+    const nb = Number(b)
+    if (!Number.isFinite(na) || !Number.isFinite(nb) || nb === 0) return null
+    return na / nb
+  }
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
+
+function scoreOrderedFillIn(freeText: string, expected: string[]): number {
+  const parts = freeText.split(' ; ').map((x) => x.trim())
+  if (parts.length < expected.length) return 0
+  let ok = 0
+  for (let i = 0; i < expected.length; i++) {
+    const a = normNumericInput(parts[i] ?? '')
+    const b = normNumericInput(expected[i] ?? '')
+    if (a == null || b == null) continue
+    if (Math.abs(a - b) < 1e-9) ok++
+  }
+  return ok / expected.length
+}
+
 function isVectorsScorableIndex(i: number): boolean {
   const q = VECTORS_QUESTIONS[i]
   if (!q) return false
-  if (q.correctAnswer === null) return false
+  const gradedManual =
+    (q.placementExpected?.length ?? 0) > 0 || q.fillGraded === true
+  if (q.correctAnswer === null && !gradedManual) return false
   return !isExcludedFromGeometryScoreAndAverage({
     ...q,
     question: q.question,
@@ -76,18 +129,30 @@ export function VectorsQuizTest() {
     const q = VECTORS_QUESTIONS[idx]
     if (!q) return
 
+    const gradePP = (q.placementExpected?.length ?? 0) > 0
+    const gradeFI = q.fillGraded === true && Boolean(q.fillIn)
+    const isManualRecord =
+      (Boolean(q.pointPlacement) && !gradePP) ||
+      (Boolean(q.fillIn) && !gradeFI)
+
+    if (!gradePP && !gradeFI && !isManualRecord && selectedList.length === 0) return
+    if ((gradePP || gradeFI) && !freeText.trim()) return
+
+    let score = 0
+    if (gradePP && q.placementExpected) {
+      score = scorePlacements(freeText, q.placementExpected)
+    } else if (gradeFI && q.fillIn) {
+      const exp = q.fillIn.fields.map((f) => f.expected ?? '').filter((x) => x.length > 0)
+      score = scoreOrderedFillIn(freeText, exp)
+    } else if (!isManualRecord) {
+      score = scoreGeometryQuestion({
+        options: q.options,
+        selected: selectedList,
+        correctAnswer: q.correctAnswer,
+      })
+    }
+
     const isFree = Boolean(q.pointPlacement || q.fillIn)
-
-    if (!isFree && selectedList.length === 0) return
-
-    const score = isFree
-      ? 0
-      : scoreGeometryQuestion({
-          options: q.options,
-          selected: selectedList,
-          correctAnswer: q.correctAnswer,
-        })
-
     const trial: VectorsTrialResult = {
       index: idx,
       questionId: q.id,

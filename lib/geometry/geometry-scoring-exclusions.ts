@@ -30,8 +30,15 @@ export function isExcludedFromGeometryScoreAndAverage(
     const il = q.interactiveLine as { graded?: boolean } | null
     if (!il?.graded) return true
   }
-  if (q.pointPlacement != null) return true
-  if (q.fillIn != null) return true
+  if (q.pointPlacement != null) {
+    const exp = (q as { placementExpected?: unknown }).placementExpected
+    if (Array.isArray(exp) && exp.length > 0) return false
+    return true
+  }
+  if (q.fillIn != null) {
+    if ((q as { fillGraded?: boolean }).fillGraded === true) return false
+    return true
+  }
 
   const id = String(q.id ?? '')
   if (id === 'M1' || id.startsWith('AE') || id.startsWith('AutoEval')) return true

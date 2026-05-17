@@ -2,8 +2,8 @@
  * Droite dans le plan — Cognitive Assessment Test
  * Domain: Cognition et apprentissage de la géométrie
  *
- * Mirrors the canonical Python dataset in tools/droite_plan/dataset.py.
- * 12 questions — Q1 diagnostic, Q2 with repère (O, I, J), Q3..Q12 MCQ.
+ * 13 questions scorables (+ Q1 diagnostic) — Q2 : repère, droite 12x − 3y + 2 = 0,
+ * points A(2,−3), B(−1,0), C(c,0) — affirmations multiples.
  *
  * Competencies:
  *  C1: Traduction des concepts et propriétés de la géométrie affine et
@@ -32,7 +32,8 @@ export interface DroitePlanQuestion {
 export interface DroitePlanTrialResult {
   index: number
   questionId: string
-  selected: number
+  /** Single-select stores one index; multi-select stores all chosen indices. */
+  selected: number | number[]
   correct: boolean
   /** Per-question score in [0, 1] — supports partial credit. */
   score?: number
@@ -51,7 +52,6 @@ export interface DroitePlanResult {
 }
 
 export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
-  // ─── Partie I — Cours ────────────────────────────────────────────────────
   {
     id: 'T1-D2-Q1',
     number: 1,
@@ -73,6 +73,22 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     typeCode: 1,
     competencies: ['C1'],
     question:
+      'Dans le repère orthonormé \\( (O, \\vec{i}, \\vec{j}) \\), on considère les points \\( A(2,\\,-3) \\), \\( B(-1,\\,0) \\), \\( C(c,\\,0) \\) et la droite \\( (\\Delta) \\) d\'équation \\( 12x - 3y + 2 = 0 \\). Cochez les affirmations correctes.',
+    options: [
+      'Un vecteur directeur de \\( (\\Delta) \\) est \\( (1,\\,4) \\)',
+      'Le point \\( A(2,-3) \\) appartient à \\( (\\Delta) \\)',
+      'Le point \\( B(-1,0) \\) appartient à \\( (\\Delta) \\)',
+      'Pour que \\( C(c,0) \\in (\\Delta) \\), il faut \\( c = -\\dfrac{1}{6} \\)',
+      'Le coefficient directeur de \\( (\\Delta) \\) est \\( 4 \\)',
+    ],
+    correctAnswer: [0, 3, 4],
+  },
+  {
+    id: 'T1-D2-Q3',
+    number: 3,
+    typeCode: 1,
+    competencies: ['C1'],
+    question:
       'Dans le repère orthonormé \\( (O, \\vec{i}, \\vec{j}) \\) ci-dessous, placer les points \\( A(2,\\,-3) \\), \\( B(-1,\\,0) \\) et \\( C(0,\\,2) \\), puis tracer la droite \\( (\\Delta) \\) d\'équation \\( 2x - 3y + 2 = 0 \\). Laquelle de ces affirmations est correcte ?',
     options: [
       'La droite \\( (\\Delta) \\) passe par \\( B(-1, 0) \\) et a pour pente \\( \\dfrac{2}{3} \\)',
@@ -84,8 +100,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     imagePath: '/images/geometry/droite-plan/repere.png',
   },
   {
-    id: 'T1-D2-Q3',
-    number: 3,
+    id: 'T1-D2-Q4',
+    number: 4,
     typeCode: 1,
     competencies: ['C1'],
     question: 'Toute droite du plan admet une équation cartésienne de la forme :',
@@ -98,8 +114,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     correctAnswer: 0,
   },
   {
-    id: 'T1-D2-Q4',
-    number: 4,
+    id: 'T1-D2-Q5',
+    number: 5,
     typeCode: 1,
     competencies: ['C1'],
     question:
@@ -113,8 +129,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     correctAnswer: 0,
   },
   {
-    id: 'T1-D2-Q5',
-    number: 5,
+    id: 'T1-D2-Q6',
+    number: 6,
     typeCode: 1,
     competencies: ['C1'],
     question:
@@ -127,11 +143,9 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     ],
     correctAnswer: 0,
   },
-
-  // ─── Partie II — Construction ────────────────────────────────────────────
   {
-    id: 'T2-D2-Q6',
-    number: 6,
+    id: 'T1-D2-Q7',
+    number: 7,
     typeCode: 2,
     competencies: ['C1'],
     question:
@@ -145,8 +159,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     correctAnswer: 0,
   },
   {
-    id: 'T2-D2-Q7',
-    number: 7,
+    id: 'T2-D2-Q8',
+    number: 8,
     typeCode: 2,
     competencies: ['C1'],
     question:
@@ -160,8 +174,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     correctAnswer: 0,
   },
   {
-    id: 'T2-D2-Q8',
-    number: 8,
+    id: 'T2-D2-Q9',
+    number: 9,
     typeCode: 2,
     competencies: ['C1'],
     question:
@@ -174,11 +188,9 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     ],
     correctAnswer: 0,
   },
-
-  // ─── Partie III — Raisonnement ───────────────────────────────────────────
   {
-    id: 'T3-D2-Q9',
-    number: 9,
+    id: 'T3-D2-Q10',
+    number: 10,
     typeCode: 3,
     competencies: ['C2'],
     question:
@@ -192,8 +204,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     correctAnswer: 1,
   },
   {
-    id: 'T3-D2-Q10',
-    number: 10,
+    id: 'T3-D2-Q11',
+    number: 11,
     typeCode: 3,
     competencies: ['C2'],
     question:
@@ -207,8 +219,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     correctAnswer: 0,
   },
   {
-    id: 'T3-D2-Q11',
-    number: 11,
+    id: 'T3-D2-Q12',
+    number: 12,
     typeCode: 3,
     competencies: ['C2'],
     question:
@@ -222,8 +234,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     correctAnswer: 0,
   },
   {
-    id: 'T3-D2-Q12',
-    number: 12,
+    id: 'T3-D2-Q13',
+    number: 13,
     typeCode: 3,
     competencies: ['C2'],
     question:
@@ -243,8 +255,6 @@ export const DROITE_PLAN_TYPE_LABELS: Record<number, string> = {
   2: 'Partie II — Questions de la construction',
   3: 'Partie III — Questions de raisonnement',
 }
-
-// ─── Result persistence ─────────────────────────────────────────────────────
 
 export function listDroitePlanResults(): DroitePlanResult[] {
   if (typeof window === 'undefined') return []

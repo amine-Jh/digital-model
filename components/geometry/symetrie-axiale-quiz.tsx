@@ -67,8 +67,7 @@ export function SymetrieAxialeQuiz() {
           correctAnswer: question.correctAnswer,
         })
     const pts = question.points ?? 0
-    const pointsEarned =
-      excluded || pts === 0 ? 0 : score >= 1 ? pts : 0
+    const pointsEarned = excluded || pts === 0 ? 0 : score * pts
 
     const trial: SymetrieAxialeTrialResult = {
       index: current,

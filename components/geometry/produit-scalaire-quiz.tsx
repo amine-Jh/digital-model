@@ -452,12 +452,7 @@ function TrialView({
         </h2>
         <div className="text-right">
           <span className="text-sm font-semibold text-indigo-600">{question.id}</span>
-          <p className="text-xs text-muted-foreground">
-            Leçon : {lessonLabel}
-            {question.competencies.length > 0 && (
-              <> · Compétence : {question.competencies.join(', ')}</>
-            )}
-          </p>
+          <p className="text-xs text-muted-foreground">Leçon : {lessonLabel}</p>
         </div>
       </div>
       <Progress value={((index + 1) / total) * 100} className="mb-6" />

@@ -6,7 +6,7 @@
  *      verrouillée. Aucune révision possible.
  *
  *  Q7 → Q13 partagent la même figure SVG (centre I).
- *  Q16 — image-choice : 2 figures candidates pour la construction.
+ *  Q16 — image-choice : figure initiale SVG + 4 figures candidates.
  *  Q17 — figure obligatoire 'figure-iso' (triangle A'B'C').
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -32,11 +32,11 @@ import {
   SymCentraleResult,
   SymCentraleTrialResult,
   saveSymCentraleResult,
-  gradeAnswer,
   levelFor,
   FigureKey,
 } from '@/lib/geometry/symetrie-centrale'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
+import { scoreGeometryQuestion } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
@@ -111,8 +111,15 @@ export function SymetrieCentraleQuiz() {
     if (selectedList.length === 0) return
     const q = SYMETRIE_CENTRALE_QUESTIONS[current]
     const excluded = isExcludedFromGeometryScoreAndAverage(q)
-    const correct = !excluded && gradeAnswer(q, selectedList)
-    const pointsEarned = correct ? q.points : 0
+    const score = excluded
+      ? 0
+      : scoreGeometryQuestion({
+          options: q.options,
+          selected: selectedList,
+          correctAnswer: q.correctAnswer,
+        })
+    const pointsEarned = excluded || q.points === 0 ? 0 : score * q.points
+    const correct = !excluded && score === 1
 
     const trial: SymCentraleTrialResult = {
       index: current,
@@ -436,6 +443,15 @@ function TrialView({
             </div>
           )}
 
+          {question.kind === 'image-choice' && question.id === 'Q16' && (
+            <div className="rounded-md border bg-white p-3">
+              <p className="mb-2 text-sm font-semibold text-muted-foreground">
+                Figure initiale (énoncé)
+              </p>
+              <EquilateralConstructionBase />
+            </div>
+          )}
+
           {question.kind === 'image-choice' && question.optionImages ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {question.optionImages.map((src, idx) => {
@@ -572,6 +588,52 @@ function FigureRenderer({ kind }: { kind: FigureKey }) {
   return null
 }
 
+/** Q16 — triangle équilatéral ABC (AB = 6) et milieux I, J, K des côtés. */
+function EquilateralConstructionBase() {
+  const A = { x: 200, y: 60 }
+  const B = { x: 100, y: 230 }
+  const C = { x: 300, y: 230 }
+  const I = { x: (A.x + C.x) / 2, y: (A.y + C.y) / 2 }
+  const J = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }
+  const K = { x: (B.x + C.x) / 2, y: (B.y + C.y) / 2 }
+
+  const dot = (
+    p: { x: number; y: number },
+    label: string,
+    color = '#111',
+    dx = 8,
+    dy = -8,
+  ) => (
+    <g key={label}>
+      <circle cx={p.x} cy={p.y} r={3.5} fill={color} />
+      <text x={p.x + dx} y={p.y + dy} fontSize={13} fontWeight={700} fill={color}>
+        {label}
+      </text>
+    </g>
+  )
+
+  return (
+    <svg viewBox="0 0 400 360" className="mx-auto block w-full max-w-md">
+      <rect width="400" height="360" fill="#fafafa" />
+      <polygon
+        points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}`}
+        fill="#eef2ff"
+        stroke="#4f46e5"
+        strokeWidth={1.8}
+      />
+      {dot(I, 'I', '#dc2626', 8, -6)}
+      {dot(J, 'J', '#dc2626', -16, -6)}
+      {dot(K, 'K', '#dc2626', 0, 16)}
+      {dot(A, 'A', '#111', -4, -10)}
+      {dot(B, 'B', '#111', -16, 8)}
+      {dot(C, 'C', '#111', 8, 8)}
+      <text x="200" y="350" textAnchor="middle" fontSize={12} fill="#64748b">
+        AB = 6
+      </text>
+    </svg>
+  )
+}
+
 /** Q7-Q13 shared figure — center I with several labelled points & their images. */
 function SharedFigureI() {
   // Coordinate system: I = (200, 140) in viewBox 400x280
@@ -643,17 +705,14 @@ function SharedFigureI() {
 
 /**
  * Q17 figure — triangle équilatéral ABC + triangle A'B'C' obtenu par
- * symétries centrales par rapport aux milieux des côtés (E, G, K).
- * A' = sym de A par rapport à K (milieu de [BC])  → A' = B + C − A
- * B' = sym de B par rapport à E (milieu de [AC])  → B' = A + C − B
- * C' = sym de C par rapport à G (milieu de [AB])  → C' = A + B − C
+ * symétries centrales par rapport aux milieux I, J, K des côtés.
  */
 function FigureIso() {
   const A = { x: 200, y: 60 }
   const B = { x: 100, y: 230 }
   const C = { x: 300, y: 230 }
-  const E = { x: (A.x + C.x) / 2, y: (A.y + C.y) / 2 }
-  const G = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }
+  const I = { x: (A.x + C.x) / 2, y: (A.y + C.y) / 2 }
+  const J = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }
   const K = { x: (B.x + C.x) / 2, y: (B.y + C.y) / 2 }
   const Ap = { x: B.x + C.x - A.x, y: B.y + C.y - A.y }
   const Bp = { x: A.x + C.x - B.x, y: A.y + C.y - B.y }
@@ -693,8 +752,8 @@ function FigureIso() {
           strokeWidth={1.8}
         />
         {/* Midpoint markers */}
-        {dot(E, 'E', '#dc2626', 8, -6)}
-        {dot(G, 'G', '#dc2626', -16, -6)}
+        {dot(I, 'I', '#dc2626', 8, -6)}
+        {dot(J, 'J', '#dc2626', -16, -6)}
         {dot(K, 'K', '#dc2626', 0, 16)}
         {/* Triangle ABC vertices */}
         {dot(A, 'A', '#111', -4, -10)}
@@ -708,7 +767,7 @@ function FigureIso() {
       <p className="mt-2 text-center text-xs text-muted-foreground">
         Q17 — Triangle <strong>ABC</strong> équilatéral et son image{' '}
         <strong>A&apos;B&apos;C&apos;</strong> obtenue par symétries centrales
-        de centres E, G, K (milieux des côtés).
+        de centres <strong>I</strong>, <strong>J</strong>, <strong>K</strong> (milieux des côtés).
       </p>
     </div>
   )

@@ -48,7 +48,7 @@ function RotationImage({ src, questionNumber }: { src: string; questionNumber: n
       <div className="w-full aspect-video max-w-xl mx-auto rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex flex-col items-center justify-center gap-2">
         <Brain className="w-10 h-10 text-muted-foreground/30" />
         <p className="text-sm text-muted-foreground">
-          rotation ({questionNumber}).jpg ou Rotation ({questionNumber}).png
+          rotation ({questionNumber}).jpg
         </p>
         <p className="text-xs text-muted-foreground/60">Déposez l&apos;image dans <code className="bg-muted px-1 rounded">public/rotation/</code></p>
       </div>
