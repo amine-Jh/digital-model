@@ -184,23 +184,6 @@ export default function AnalyticsPage() {
     )
   }
 
-  const fit = placeholderFit()
-
-  const recParams = useMemo(() => {
-    if (useDemoAnalytics || teacherDomainProfile.length === 0) {
-      return { weakestDomain: 'Memory', strongestDomain: 'Spatial', competencyScore: 62 }
-    }
-    const sorted = [...teacherDomainProfile].sort((a, b) => a.score - b.score)
-    const weakest = sorted[0]?.domain ?? '—'
-    const strongest = sorted[sorted.length - 1]?.domain ?? '—'
-    const competencyScore = Math.round(
-      teacherDomainProfile.reduce((s, r) => s + r.score, 0) / teacherDomainProfile.length,
-    )
-    return { weakestDomain: weakest, strongestDomain: strongest, competencyScore }
-  }, [useDemoAnalytics, teacherDomainProfile])
-
-  const recs = buildRecommendations(recParams)
-
   return (
     <div className="bg-background min-h-screen">
       <Sidebar userRole={isAdminAreaRole(user.role) ? 'admin' : 'teacher'} userName={user.username} />

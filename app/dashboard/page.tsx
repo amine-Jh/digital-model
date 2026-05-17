@@ -151,6 +151,11 @@ export default function StudentDashboard() {
     [catalog, sessions],
   )
 
+  const tvpsMean = useMemo(() => {
+    void tvpsTick
+    return computeTvps3MeanPercent(mergedTests)
+  }, [mergedTests, tvpsTick])
+
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
@@ -222,11 +227,6 @@ export default function StudentDashboard() {
   )
   const avgScore =
     completedWithScore.length > 0 ? averageCompletedScore(mergedTests) : null
-
-  const tvpsMean = useMemo(() => {
-    void tvpsTick
-    return computeTvps3MeanPercent(mergedTests)
-  }, [mergedTests, tvpsTick])
 
   const scoredDomains = domainCards.filter((d) => d.tests.some((t) => t.latestScore != null))
   const strengths = scoredDomains
