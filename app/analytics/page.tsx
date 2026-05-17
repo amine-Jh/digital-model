@@ -109,6 +109,22 @@ export default function AnalyticsPage() {
     }
   }, [user, useDemoAnalytics])
 
+  const recParams = useMemo(() => {
+    if (useDemoAnalytics || teacherDomainProfile.length === 0) {
+      return { weakestDomain: 'Memory', strongestDomain: 'Spatial', competencyScore: 62 }
+    }
+    const sorted = [...teacherDomainProfile].sort((a, b) => a.score - b.score)
+    const weakest = sorted[0]?.domain ?? '—'
+    const strongest = sorted[sorted.length - 1]?.domain ?? '—'
+    const competencyScore = Math.round(
+      teacherDomainProfile.reduce((s, r) => s + r.score, 0) / teacherDomainProfile.length,
+    )
+    return { weakestDomain: weakest, strongestDomain: strongest, competencyScore }
+  }, [useDemoAnalytics, teacherDomainProfile])
+
+  const recs = useMemo(() => buildRecommendations(recParams), [recParams])
+  const fit = placeholderFit()
+
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
