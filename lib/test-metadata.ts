@@ -56,7 +56,7 @@ const byTest: Record<string, Partial<TestTheoreticalMeta>> = {
     author: 'Programme national marocain — 1ère Bac Sciences',
     source: 'Manuels scolaires marocains, programme MENFP',
     objective: 'Évaluer la maîtrise de la symétrie axiale et la compréhension des isométries du plan.',
-    instructions: 'Lisez chaque question attentivement. Pour chaque item, sélectionnez la réponse correcte parmi les quatre propositions. Chaque question est associée à une compétence (Cₖ) spécifique.',
+    instructions: 'Lisez chaque question attentivement. Certaines questions admettent plusieurs réponses correctes — cochez toutes les bonnes options. Q7 et Q8 portent sur l’axe (GH). Chaque question notée est associée à une compétence (Cₖ).',
   },
   'test-geo-vectors-complete': {
     definition: 'Un vecteur est défini par une direction, un sens et une norme. La translation de vecteur \\( \\vec{u} \\) est la transformation qui à tout point M associe M\' tel que \\( \\vec{MM\'} = \\vec{u} \\).',
@@ -90,13 +90,26 @@ const byTest: Record<string, Partial<TestTheoreticalMeta>> = {
     objective: 'Évaluer la maîtrise du produit scalaire (C1, C3, C6) et des outils de géométrie analytique (C2, C4, C5) : équations de droites et cercles, distances, projections, angles.',
     instructions: 'Le test comporte 27 questions réparties en 3 parties (cours, visualisation, raisonnement). Certaines questions admettent plusieurs bonnes réponses (cases à cocher) et quelques questions ouvertes ne sont pas notées automatiquement.',
   },
+  'test-geo-space-volumes': {
+    definition:
+      'Les volumes des solides usuels (cube, pyramide, cylindre) et l’effet d’un agrandissement de rapport k sur les aires (k²) et les volumes (k³).',
+    background:
+      'Programme de géométrie dans l’espace : formules de volume et facteurs d’agrandissement / réduction.',
+    author: 'Programme national marocain — Tronc commun scientifique',
+    source: 'Manuels scolaires marocains, programme MENFP',
+    objective:
+      'Évaluer le calcul des volumes et l’utilisation des facteurs k² (aires) et k³ (volumes). Les capacités Cₖ seront renseignées lorsqu’elles seront communiquées.',
+    instructions:
+      'Q1–Q5 cours, Q6–Q10 application (figures pour Q6–Q8). Q11–Q15 (raisonnement) ne sont proposées aux élèves que lorsque photographies et clés sont configurées. Trois choix A, B, C par question publiée.',
+  },
   'test-geo-line-plane': {
     definition: 'Une droite dans le plan est caractérisée par une équation de la forme y = mx + b (pente m, ordonnée à l\'origine b) ou ax + by + c = 0 (forme générale).',
     background: 'L\'étude des droites dans le plan est au cœur de la géométrie analytique. Pentes, parallélisme, perpendicularité, distance et intersection sont les notions clés.',
     author: 'Programme national marocain — 1ère Bac Sciences',
     source: 'Manuels scolaires marocains, programme MENFP',
-    objective: 'Évaluer la maîtrise des équations de droites, du parallélisme, de la perpendicularité, de la distance point-droite et des intersections.',
-    instructions: 'Lisez chaque question attentivement. Pour chaque item, sélectionnez la réponse correcte parmi les quatre propositions. Chaque question est associée à une compétence (Cₖ) spécifique.',
+    objective: 'Évaluer la maîtrise des équations de droites, du parallélisme, de la perpendicularité, de la distance point-droite et des intersections (C1, C2).',
+    instructions:
+      'Q1 auto-évaluation (hors barème). Q2 à réponses multiples. Q3 affiche les coordonnées et l’équation, sans placement. Q10 Oui/Non sans justification. Q11 notée (droite parallèle, option A).',
   },
 }
 

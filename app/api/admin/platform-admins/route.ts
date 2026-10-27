@@ -4,7 +4,7 @@
  * POST body: { email: string, password: string, fullName?: string }
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabaseServer, tryGetSupabaseAdmin } from '@/lib/supabase/server'
 import { requireSuperAdmin } from '@/lib/api/require-super-admin'
 
 export async function GET() {
@@ -12,8 +12,8 @@ export async function GET() {
   if ('response' in gate) return gate.response
 
   try {
-    const admin = getSupabaseAdmin()
-    const { data, error } = await admin
+    const sb = await getSupabaseServer()
+    const { data, error } = await sb
       .from('profiles')
       .select('id,email,full_name,role,created_at')
       .in('role', ['admin', 'super_admin'])
@@ -46,7 +46,16 @@ export async function POST(request: Request) {
       )
     }
 
-    const svc = getSupabaseAdmin()
+    const svc = tryGetSupabaseAdmin()
+    if (!svc) {
+      return NextResponse.json(
+        {
+          error:
+            'Creating admins requires SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) on the server.',
+        },
+        { status: 503 },
+      )
+    }
     const { data, error } = await svc.auth.admin.createUser({
       email,
       password,

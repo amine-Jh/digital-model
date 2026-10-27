@@ -48,7 +48,8 @@ insert into public.tests (id, name, domain, description) values
   ('test-geo-vectors-complete',      'Vecteurs et translation',           'cognition-geometrie', 'CogniTest catalogue'),
   ('test-geo-trig-circle',           'Cercle trigonométrique interactif', 'cognition-geometrie', 'CogniTest catalogue'),
   ('test-geo-space',                 'Géométrie dans l''espace',           'cognition-geometrie', 'CogniTest catalogue'),
-  ('test-geo-produit-scalaire',      'Produit scalaire',                   'cognition-geometrie', 'CogniTest catalogue')
+  ('test-geo-produit-scalaire',      'Produit scalaire',                   'cognition-geometrie', 'CogniTest catalogue'),
+  ('test-geo-space-volumes',         'Géométrie dans l''espace : volumes', 'cognition-geometrie', 'CogniTest catalogue')
 on conflict (id) do update
   set name        = excluded.name,
       domain      = excluded.domain,

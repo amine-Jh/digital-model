@@ -1,15 +1,9 @@
 /**
  * Droite dans le plan — Cognitive Assessment Test
- * Domain: Cognition et apprentissage de la géométrie
  *
- * 13 questions scorables (+ Q1 diagnostic) — Q2 : repère, droite 12x − 3y + 2 = 0,
- * points A(2,−3), B(−1,0), C(c,0) — affirmations multiples.
- *
- * Competencies:
- *  C1: Traduction des concepts et propriétés de la géométrie affine et
- *      vectorielle à l'aide des coordonnées.
- *  C2: Utilisation de l'outil analytique (colinéarité, alignement,
- *      projection, distance…).
+ * Q1 auto-évaluation (hors barème). Q2 multi A,D,E. Q3 énoncé coordonnées
+ * sans placement. Q10 Oui/Non. Q11 parallèle : A (notée).
+ * Capacités C1–C2 : `CAPACITIES_BY_TEST['test-geo-line-plane']`.
  */
 
 export const DROITE_PLAN_TEST_ID = 'test-geo-line-plane'
@@ -22,11 +16,17 @@ export interface DroitePlanQuestion {
   competencies: string[]
   question: string
   options: string[]
-  /** Single index, array of indices (multi-correct), or null (diagnostic). */
+  /** Single index, array of indices (multi-correct), or null (non noté). */
   correctAnswer: number | number[] | null
   imagePath?: string
   expectedText?: string
   isDiagnostic?: boolean
+  /** Multi-select even when comparing manuscript keys. */
+  allowMultiple?: boolean
+  /** Q10 : boutons Oui / Non, sans justification. */
+  yesNo?: boolean
+  /** false → réponse enregistrée, hors barème auto (clé incertaine). */
+  keyVerified?: boolean
 }
 
 export interface DroitePlanTrialResult {
@@ -81,6 +81,7 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
       'Pour que \\( C(c,0) \\in (\\Delta) \\), il faut \\( c = -\\dfrac{1}{6} \\)',
       'Le coefficient directeur de \\( (\\Delta) \\) est \\( 4 \\)',
     ],
+    allowMultiple: true,
     correctAnswer: [0, 3, 4],
   },
   {
@@ -89,15 +90,14 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     typeCode: 1,
     competencies: ['C1'],
     question:
-      'Dans le repère orthonormé \\( (O, \\vec{i}, \\vec{j}) \\) ci-dessous, placer les points \\( A(2,\\,-3) \\), \\( B(-1,\\,0) \\) et \\( C(0,\\,2) \\), puis tracer la droite \\( (\\Delta) \\) d\'équation \\( 2x - 3y + 2 = 0 \\). Laquelle de ces affirmations est correcte ?',
+      'Soient les points \\( A(2\\,;\\,-3) \\), \\( B(-1\\,;\\,0) \\), \\( C(0\\,;\\,1) \\) et la droite \\( D \\) d\'équation \\( 2x - 3y + 2 = 0 \\). Laquelle de ces affirmations est correcte ?',
     options: [
-      'La droite \\( (\\Delta) \\) passe par \\( B(-1, 0) \\) et a pour pente \\( \\dfrac{2}{3} \\)',
-      'La droite \\( (\\Delta) \\) passe par \\( A(2, -3) \\)',
-      'La droite \\( (\\Delta) \\) est parallèle à l\'axe des abscisses',
-      'La droite \\( (\\Delta) \\) a pour pente \\( -\\dfrac{2}{3} \\)',
+      'La droite \\( D \\) passe par \\( B(-1, 0) \\) et a pour pente \\( \\dfrac{2}{3} \\)',
+      'La droite \\( D \\) passe par \\( A(2, -3) \\)',
+      'La droite \\( D \\) est parallèle à l\'axe des abscisses',
+      'La droite \\( D \\) a pour pente \\( -\\dfrac{2}{3} \\)',
     ],
     correctAnswer: 0,
-    imagePath: '/images/geometry/droite-plan/repere.png',
   },
   {
     id: 'T1-D2-Q4',
@@ -195,12 +195,8 @@ export const DROITE_PLAN_QUESTIONS: DroitePlanQuestion[] = [
     competencies: ['C2'],
     question:
       'Le point \\( A(2,\\,-3) \\) appartient-il à la droite \\( (\\Delta) \\) d\'équation \\( 2x - 3y + 2 = 0 \\) ?',
-    options: [
-      'Oui, car \\( 2(2) - 3(-3) + 2 = 15 \\neq 0 \\)',
-      'Non, car \\( 2(2) - 3(-3) + 2 = 15 \\neq 0 \\)',
-      'Oui, car \\( A \\) a une abscisse positive',
-      'On ne peut pas conclure',
-    ],
+    options: ['Oui', 'Non'],
+    yesNo: true,
     correctAnswer: 1,
   },
   {
@@ -255,6 +251,58 @@ export const DROITE_PLAN_TYPE_LABELS: Record<number, string> = {
   2: 'Partie II — Questions de la construction',
   3: 'Partie III — Questions de raisonnement',
 }
+
+export function isDroitePlanMulti(q: DroitePlanQuestion): boolean {
+  if (q.allowMultiple === true) return true
+  return Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1
+}
+
+export function isDroitePlanScorableQuestion(q: DroitePlanQuestion): boolean {
+  if (q.isDiagnostic) return false
+  if (q.keyVerified === false) return false
+  if (q.correctAnswer === null) return false
+  return true
+}
+
+/**
+ * Écarts manuscrit / énoncé en place. Les clés auto-notées suivent l’énoncé
+ * actuel lorsqu’il est cohérent.
+ */
+export const DROITE_PLAN_CORRECTION_REVIEW: {
+  questionId: string
+  status: 'needs-review' | 'checked-against-stem'
+  manuscript: string
+  note: string
+}[] = [
+  {
+    questionId: 'T1-D2-Q1',
+    status: 'needs-review',
+    manuscript: 'A, D, E',
+    note:
+      'Q1 actuelle = auto-évaluation (4 options A–D, pas de E). La clé A,D,E correspond à Q2 (cinq affirmations). Non appliquée à Q1.',
+  },
+  {
+    questionId: 'T1-D2-Q2',
+    status: 'checked-against-stem',
+    manuscript: 'A, D, E',
+    note:
+      'Cohérent avec 12x−3y+2=0 : directeur (1,4), c=−1/6, pente 4. A et B n’appartiennent pas à (Δ).',
+  },
+  {
+    questionId: 'T1-D2-Q3',
+    status: 'checked-against-stem',
+    manuscript: 'A(2;−3), B(−1;0), C(0;1), D: 2x−3y+2=0 — pas de placement',
+    note:
+      'C a été corrigé en (0;1). Propositions d’origine conservées. A reste vraie (B ∈ D et pente 2/3).',
+  },
+  {
+    questionId: 'T3-D2-Q11',
+    status: 'checked-against-stem',
+    manuscript: 'A',
+    note:
+      'Notée. (4x−6y+7=0) est parallèle à (2x−3y+2=0) (vecteurs normaux proportionnels, constantes distinctes).',
+  },
+]
 
 export function listDroitePlanResults(): DroitePlanResult[] {
   if (typeof window === 'undefined') return []

@@ -13,8 +13,10 @@ export type GeometryScoringShape = {
   isOpenEnded?: boolean
   interactiveLine?: unknown
   pointPlacement?: unknown
+  sequentialPlacement?: boolean
   fillIn?: unknown
   isDiagnosticQuestion?: boolean
+  keyVerified?: boolean
 }
 
 /** True = never count toward score, mean, or Cₖ aggregates. */
@@ -25,12 +27,14 @@ export function isExcludedFromGeometryScoreAndAverage(
   if (q.isAutoeval === true) return true
   if (q.isDiagnostic === true) return true
   if (q.isDiagnosticQuestion === true) return true
+  if (q.keyVerified === false) return true
   if (q.isOpenEnded === true) return true
   if (q.interactiveLine != null) {
     const il = q.interactiveLine as { graded?: boolean } | null
     if (!il?.graded) return true
   }
   if (q.pointPlacement != null) {
+    if (q.sequentialPlacement === true) return false
     const exp = (q as { placementExpected?: unknown }).placementExpected
     if (Array.isArray(exp) && exp.length > 0) return false
     return true

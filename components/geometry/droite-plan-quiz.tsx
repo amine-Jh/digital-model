@@ -14,21 +14,30 @@ import {
   DROITE_PLAN_TYPE_LABELS,
   DroitePlanResult,
   DroitePlanTrialResult,
+  isDroitePlanMulti,
+  isDroitePlanScorableQuestion,
   saveDroitePlanResult,
 } from '@/lib/geometry/droite-plan'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
+import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 import { buildGeometrySessionMetadataFraction } from '@/lib/geometry/capacity-results'
+import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
+import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-scoring-exclusions'
+import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
-function arrayEquals(a: number[], b: number[]) {
-  if (a.length !== b.length) return false
-  const as = [...a].sort()
-  const bs = [...b].sort()
-  return as.every((v, i) => v === bs[i])
+function isDroitePlanScorableIndex(i: number): boolean {
+  const q = DROITE_PLAN_QUESTIONS[i]
+  if (!q) return false
+  if (!isDroitePlanScorableQuestion(q)) return false
+  return !isExcludedFromGeometryScoreAndAverage({
+    ...q,
+    question: q.question,
+  })
 }
 
 function renderInlineLatex(text: string): string {
@@ -54,26 +63,19 @@ export function DroitePlanQuiz() {
   const trialStart = useRef(0)
 
   const question = DROITE_PLAN_QUESTIONS[current]
-  const isMulti =
-    Array.isArray(question?.correctAnswer) &&
-    (question.correctAnswer as number[]).length > 1
+  const isMulti = question ? isDroitePlanMulti(question) : false
 
   const toggleSelect = (idx: number) => {
-    if (isMulti) {
-      setSelectedList((prev) =>
-        prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx],
-      )
-    } else {
-      setSelectedList([idx])
-    }
+    setSelectedList((prev) =>
+      toggleSelectionWithExclusive(question.options, prev, idx, isMulti),
+    )
   }
 
   const submit = useCallback(() => {
     if (selectedList.length === 0) return
     const q = DROITE_PLAN_QUESTIONS[current]
 
-    const multi =
-      Array.isArray(q.correctAnswer) && (q.correctAnswer as number[]).length > 1
+    const multi = isDroitePlanMulti(q)
 
     const score = scoreGeometryQuestion({
       options: q.options,
@@ -104,10 +106,7 @@ export function DroitePlanQuiz() {
 
   useEffect(() => {
     if (phase === 'done' && trials.length > 0) {
-      const scorable = trials.filter((t) => {
-        const q = DROITE_PLAN_QUESTIONS[t.index]
-        return q.correctAnswer !== null && !q.isDiagnostic
-      })
+      const scorable = trials.filter((t) => isDroitePlanScorableIndex(t.index))
       const correct = scorable.filter((t) => t.correct).length
       const r: DroitePlanResult = {
         id: `dp-${Date.now()}`,
@@ -136,9 +135,8 @@ export function DroitePlanQuiz() {
           score: t.score ?? (t.correct ? 1 : 0),
           reaction_time_ms: t.reactionTimeMs,
         })),
-        metadata: {
-          source: 'droite-plan-quiz',
-          ...buildGeometrySessionMetadataFraction({
+        metadata: (() => {
+          const geoPayload = buildGeometrySessionMetadataFraction({
             lessonTestId: DROITE_PLAN_TEST_ID,
             questions: DROITE_PLAN_QUESTIONS.map((q) => ({
               id: q.id,
@@ -151,12 +149,26 @@ export function DroitePlanQuiz() {
               score: t.score ?? (t.correct ? 1 : 0),
               correct: t.correct,
             })),
-            isScorableIndex: (i) => {
-              const q = DROITE_PLAN_QUESTIONS[i]
-              return q?.correctAnswer !== null && !q.isDiagnostic
-            },
-          }),
-        },
+            isScorableIndex: isDroitePlanScorableIndex,
+          })
+          const geometryAnalytics = buildGeometryAnalyticsReport({
+            testId: DROITE_PLAN_TEST_ID,
+            questions: DROITE_PLAN_QUESTIONS,
+            trials: r.trials.map((t) => ({
+              index: t.index,
+              questionId: t.questionId,
+              score: t.score ?? (t.correct ? 1 : 0),
+              correct: t.correct,
+            })),
+            isScorableIndex: isDroitePlanScorableIndex,
+            scoringMode: 'fraction',
+          })
+          return {
+            source: 'droite-plan-quiz',
+            ...geoPayload,
+            geometryAnalytics,
+          }
+        })(),
       })
     }
   }, [phase, trials, startedAt, user])
@@ -226,7 +238,7 @@ function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void })
           <strong>Structure :</strong> 13 questions —
           Partie I (Q1–Q6) cours, Partie II (Q7–Q9) construction,
           Partie III (Q10–Q13) raisonnement.
-          La Q1 est une auto-évaluation et n&apos;est pas notée.
+          Q1 auto-évaluation (hors barème). Q2 plusieurs réponses. Q10 Oui/Non.
         </div>
         <div className="mb-6 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
           <strong>Contexte :</strong> droite \( (\Delta)\!: 2x - 3y + 2 = 0 \), point \( A(2,\,-3) \).
@@ -249,23 +261,24 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
         <h2 className="mb-3 text-2xl font-bold">Consignes</h2>
         <ol className="mb-6 space-y-2 text-sm text-muted-foreground">
           <li>
-            <strong>1.</strong> Q1 est une auto-évaluation — répondez sincèrement, elle n&apos;est
-            pas comptée dans le score.
+            <strong>1.</strong> Q1 est une auto-évaluation — non comptée dans le score.
           </li>
           <li>
-            <strong>2.</strong> Q2 utilise un repère orthonormé (O, I, J) — visualisez la
-            configuration avant de répondre.
+            <strong>2.</strong> Q2 admet plusieurs réponses correctes (A, D, E).
           </li>
           <li>
-            <strong>3.</strong> À partir de Q3, chaque question propose 4 réponses parmi lesquelles
-            une est correcte.
+            <strong>3.</strong> Q3 donne les coordonnées et l&apos;équation ; aucun placement
+            sur un repère n&apos;est demandé.
           </li>
           <li>
-            <strong>4.</strong> Cliquez « Valider » pour passer à la question suivante.
+            <strong>4.</strong> Q10 : répondez uniquement par Oui ou Non, sans justification.
           </li>
           <li>
-            <strong>5.</strong> Le score final est calculé sur les Q2 → Q13 (Q1 exclue).
-            Certaines questions (ex. Q2) admettent plusieurs bonnes réponses.
+            <strong>5.</strong> Cliquez « Valider » pour passer à la question suivante.
+          </li>
+          <li>
+            <strong>6.</strong> Le score (C1 / C2 et total) porte sur les questions notées
+            (Q2–Q13).
           </li>
         </ol>
         <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
@@ -301,6 +314,101 @@ function TrialView({
 }: TrialViewProps) {
   const showPartBanner =
     index === 0 || DROITE_PLAN_QUESTIONS[index - 1]?.typeCode !== question.typeCode
+  const yesNo = question.yesNo === true
+
+  const questionBody = (
+    <div className="space-y-6">
+      <div
+        className="text-base leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: renderInlineLatex(question.question) }}
+      />
+
+      {question.imagePath && (
+        <div className="rounded-md border bg-white p-4 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={question.imagePath}
+            alt={`Figure ${question.id}`}
+            className="mx-auto max-h-80"
+          />
+        </div>
+      )}
+
+      {question.isDiagnostic && (
+        <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
+          ℹ️ Auto-évaluation — non comptée dans le score final.
+        </div>
+      )}
+
+      {question.keyVerified === false && (
+        <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
+          ℹ️ Réponse enregistrée ; cette question n&apos;entre pas encore dans le score
+          automatique (clé manuscrite à clarifier).
+        </div>
+      )}
+
+      {yesNo && (
+        <div className="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          Répondez par Oui ou Non — aucune justification n&apos;est demandée.
+        </div>
+      )}
+
+      {isMulti && (
+        <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30">
+          ℹ️ Plusieurs réponses correctes possibles — cochez toutes les bonnes réponses.
+        </div>
+      )}
+
+          <div className="space-y-2">
+        {question.options.map((option, idx) => {
+          const answerLabel = yesNo ? '' : `${String.fromCharCode(65 + idx)}. `
+          const isSelected = selectedList.includes(idx)
+          return (
+            <button
+              key={idx}
+              onClick={() => onToggle(idx)}
+              className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                isSelected
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950'
+                  : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center ${
+                    isMulti ? 'rounded' : 'rounded-full'
+                  } border-2 ${
+                    isSelected
+                      ? 'border-indigo-500 bg-indigo-500 text-white'
+                      : 'border-gray-300'
+                  }`}
+                >
+                  {isSelected && <span className="text-xs font-bold">✓</span>}
+                </div>
+                <div className="flex-1">
+                  <div
+                    className="font-semibold text-gray-900 dark:text-white"
+                    dangerouslySetInnerHTML={{
+                      __html: renderInlineLatex(`${answerLabel}${option}`),
+                    }}
+                  />
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      <Button
+        onClick={onSubmit}
+        disabled={selectedList.length === 0}
+        className="w-full"
+        size="lg"
+      >
+        Valider <ArrowRight className="ml-2 h-4 w-4" />
+      </Button>
+    </div>
+  )
 
   return (
     <main className="container mx-auto max-w-4xl py-8">
@@ -333,86 +441,7 @@ function TrialView({
         </div>
       )}
 
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div
-            className="text-base leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: renderInlineLatex(question.question) }}
-          />
-
-          {question.imagePath && (
-            <div className="rounded-md border bg-white p-4 text-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={question.imagePath}
-                alt={`Figure ${question.id}`}
-                className="mx-auto max-h-80"
-              />
-            </div>
-          )}
-
-          {question.isDiagnostic && (
-            <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
-              ℹ️ Auto-évaluation — non comptée dans le score final.
-            </div>
-          )}
-
-          {isMulti && (
-            <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30">
-              ℹ️ Plusieurs réponses correctes possibles — cochez toutes les bonnes réponses.
-            </div>
-          )}
-
-          <div className="space-y-2">
-            {question.options.map((option, idx) => {
-              const answerLabel = String.fromCharCode(65 + idx)
-              const isSelected = selectedList.includes(idx)
-              return (
-                <button
-                  key={idx}
-                  onClick={() => onToggle(idx)}
-                  className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
-                    isSelected
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950'
-                      : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center ${
-                        isMulti ? 'rounded' : 'rounded-full'
-                      } border-2 ${
-                        isSelected
-                          ? 'border-indigo-500 bg-indigo-500 text-white'
-                          : 'border-gray-300'
-                      }`}
-                    >
-                      {isSelected && <span className="text-xs font-bold">✓</span>}
-                    </div>
-                    <div className="flex-1">
-                      <div
-                        className="font-semibold text-gray-900 dark:text-white"
-                        dangerouslySetInnerHTML={{
-                          __html: renderInlineLatex(`${answerLabel}. ${option}`),
-                        }}
-                      />
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-
-          <Button
-            onClick={onSubmit}
-            disabled={selectedList.length === 0}
-            className="w-full"
-            size="lg"
-          >
-            Valider <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </Card>
+      <Card className="p-6">{questionBody}</Card>
     </main>
   )
 }
@@ -423,12 +452,9 @@ interface ResultsProps {
 }
 
 function Results({ trials, onExit }: ResultsProps) {
-  const scorable = trials.filter((t) => {
-    const q = DROITE_PLAN_QUESTIONS[t.index]
-    return q.correctAnswer !== null && !q.isDiagnostic
-  })
+  const scorable = trials.filter((t) => isDroitePlanScorableIndex(t.index))
   const correct = scorable.filter((t) => t.correct).length
-  const pct = scorable.length > 0 ? Math.round((correct / scorable.length) * 100) : 0
+  const pct = computeFinalPercent(scorable.map((t) => t.score ?? (t.correct ? 1 : 0)))
 
   const byType = (code: 1 | 2 | 3) => {
     const items = scorable.filter(
@@ -454,10 +480,20 @@ function Results({ trials, onExit }: ResultsProps) {
       score: t.score ?? (t.correct ? 1 : 0),
       correct: t.correct,
     })),
-    isScorableIndex: (i) => {
-      const q = DROITE_PLAN_QUESTIONS[i]
-      return q?.correctAnswer !== null && !q.isDiagnostic
-    },
+    isScorableIndex: isDroitePlanScorableIndex,
+  })
+
+  const geometryAnalytics = buildGeometryAnalyticsReport({
+    testId: DROITE_PLAN_TEST_ID,
+    questions: DROITE_PLAN_QUESTIONS,
+    trials: trials.map((t) => ({
+      index: t.index,
+      questionId: t.questionId,
+      score: t.score ?? (t.correct ? 1 : 0),
+      correct: t.correct,
+    })),
+    isScorableIndex: isDroitePlanScorableIndex,
+    scoringMode: 'fraction',
   })
 
   return (
@@ -474,6 +510,7 @@ function Results({ trials, onExit }: ResultsProps) {
             {correct} / {scorable.length} réponses correctes
           </div>
         </div>
+        <GeometryAnalyticsSummary report={geometryAnalytics} />
         <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
           <div className="rounded border p-3">
             <div className="text-xs text-muted-foreground">Cours (T1)</div>
@@ -499,6 +536,37 @@ function Results({ trials, onExit }: ResultsProps) {
           breakdown={geo.capacityBreakdown}
           unit="fraction"
         />
+        <div className="mb-6 max-h-64 overflow-auto rounded-md border bg-slate-50 p-3 text-left dark:bg-slate-900">
+          {trials.map((t) => {
+            const q = DROITE_PLAN_QUESTIONS[t.index]
+            if (q?.isDiagnostic) {
+              return (
+                <p key={t.index} className="border-b border-slate-200 py-2 text-xs last:border-b-0">
+                  Q{q.number}: Auto-évaluation
+                </p>
+              )
+            }
+            if (q?.keyVerified === false) {
+              return (
+                <p key={t.index} className="border-b border-slate-200 py-2 text-xs last:border-b-0 text-amber-800">
+                  Q{q.number}: enregistrée — clé à vérifier (hors barème)
+                </p>
+              )
+            }
+            const frac = t.score ?? (t.correct ? 1 : 0)
+            return (
+              <p
+                key={t.index}
+                className={`border-b border-slate-200 py-2 text-xs last:border-b-0 ${
+                  t.correct ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                Q{q?.number}: {t.correct ? '✓ Correct' : `✗ ${Math.round(frac * 100)} %`}
+                {q?.competencies?.length ? ` (${q.competencies.join(', ')})` : ''}
+              </p>
+            )
+          })}
+        </div>
         <div className="flex justify-center gap-3">
           <Button variant="outline" onClick={() => window.location.reload()}>
             Recommencer

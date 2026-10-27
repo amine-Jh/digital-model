@@ -1,8 +1,9 @@
 /**
  * Symétrie axiale — évaluation cognitive (Tronc commun, Maroc).
  *
- * Barème : Q2–Q15 → 1 pt (C1 /14) · Q16–Q18 → 2 pts (C2 /6) · Total /20.
- * Les auto-évaluations (Q1, AE2, AE3) ne comptent pas dans le score.
+ * C1 : Q2–Q13 (Q1 = auto-évaluation hors barème).
+ * C2 : Q14–Q17 (Q18 conservée, hors tableau officiel Q1–Q17).
+ * Barème existant : items de cours/figure 1 pt · raisonnement 2 pts.
  */
 
 export const SYMETRIE_AXIALE_TEST_ID = 'test-geo-symetrie-axiale'
@@ -24,8 +25,9 @@ export interface SymetrieAxialeQuestion {
     | 'autoeval3'
     | 'reasoning'
   correction?: string
-  /** 0 = non compté ; 1 = items C1 ; 2 = items C2 */
+  /** 0 = non compté ; 1 = items C1 / figure ; 2 = raisonnement C2 */
   points?: number
+  allowMultiple?: boolean
 }
 
 export interface SymetrieAxialeTrialResult {
@@ -83,10 +85,11 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
       'Les angles seulement',
       'Je ne sais pas',
     ],
-    correctAnswer: 0,
+    allowMultiple: true,
+    correctAnswer: [0, 1, 2],
     requiresImage: false,
     part: 'course',
-    correction: 'Réponse correcte : A',
+    correction: 'Réponses correctes : A, B, C',
     points: 1,
   },
   {
@@ -100,6 +103,7 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
       'Les distances de $M$ et de $M\'$ à $(d)$ sont égales',
       'Je ne sais pas',
     ],
+    allowMultiple: true,
     correctAnswer: [0, 1, 2],
     requiresImage: false,
     part: 'course',
@@ -117,6 +121,7 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
       'Le quadrilatère $ABEF$ peut être un parallélogramme',
       'Je ne sais pas',
     ],
+    allowMultiple: true,
     correctAnswer: [0, 1, 2],
     requiresImage: false,
     part: 'course',
@@ -173,11 +178,11 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
     id: 'Q7',
     competencies: ['C1'],
     question:
-      'Sur la figure ci-dessous (axe $(d)$), parmi les affirmations suivantes, laquelle est vraie ?',
+      'Sur la figure ci-dessous (axe $(GH)$), parmi les affirmations suivantes, laquelle est vraie ?',
     options: [
-      'Le symétrique du point $A$ par rapport à $(d)$ est le point $F$',
-      'Le symétrique du point $A$ par rapport à $(d)$ est le point $C$',
-      'Le symétrique du point $G$ par rapport à $(d)$ est le point $H$',
+      'Le symétrique du point $A$ par rapport à $(GH)$ est le point $F$',
+      'Le symétrique du point $A$ par rapport à $(GH)$ est le point $C$',
+      'Le symétrique du point $G$ par rapport à $(GH)$ est le point $H$',
       'Aucune réponse',
     ],
     correctAnswer: 1,
@@ -191,13 +196,13 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
     id: 'Q8',
     competencies: ['C1'],
     question:
-      'Sur la figure ci-dessous, le symétrique du segment $[AB]$ par rapport à $(d)$ est :',
+      'Sur la figure ci-dessous, le symétrique du segment $[AB]$ par rapport à $(GH)$ est :',
     options: ['$[BC]$', '$[AD]$', '$[DC]$', 'Aucune réponse'],
-    correctAnswer: 2,
+    correctAnswer: 0,
     requiresImage: true,
     imagePath: IMG,
     part: 'visualization',
-    correction: 'Réponse correcte : C',
+    correction: 'Réponse correcte : A',
     points: 1,
   },
   {
@@ -211,11 +216,11 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
       'Le symétrique du point $G$ par rapport à $(BD)$ est le point $H$',
       'Aucune réponse',
     ],
-    correctAnswer: 1,
+    correctAnswer: 2,
     requiresImage: true,
     imagePath: IMG,
     part: 'visualization',
-    correction: 'Réponse correcte : B',
+    correction: 'Réponse correcte : C',
     points: 1,
   },
   {
@@ -236,6 +241,7 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
     competencies: ['C1'],
     question: 'Choisir les parallélogrammes à partir de la figure :',
     options: ['$ABCD$', '$AGFH$', '$EGFH$', 'Aucune réponse'],
+    allowMultiple: true,
     correctAnswer: [0, 2],
     requiresImage: true,
     imagePath: IMG,
@@ -271,7 +277,7 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
   },
   {
     id: 'Q14',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question:
       'Le symétrique de la droite $(GH)$ par rapport à $(AC)$ est :',
     options: ['$(GH)$', '$(AC)$', '$(BD)$', 'Aucune réponse'],
@@ -284,7 +290,7 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
   },
   {
     id: 'Q15',
-    competencies: ['C1'],
+    competencies: ['C2'],
     question:
       'Le symétrique de la droite $(EG)$ par rapport à $(AC)$ est :',
     options: ['$(GH)$', '$(FH)$', '$(CH)$', '$(EH)$', 'Aucune réponse'],
@@ -335,6 +341,7 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
       '$[AB]$ est le symétrique de $[CD]$ par rapport à la droite $(IJ)$',
       'Je ne sais pas',
     ],
+    allowMultiple: true,
     correctAnswer: [0, 1],
     requiresImage: false,
     part: 'reasoning',
@@ -352,11 +359,49 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
       'Le triangle $BCD$ est un triangle rectangle en $C$',
       'Je ne sais pas',
     ],
-    correctAnswer: 0,
+    allowMultiple: true,
+    correctAnswer: [0, 2],
     requiresImage: false,
     part: 'reasoning',
-    correction: 'Réponse correcte : A',
+    correction: 'Réponses correctes : A et C',
     points: 2,
+  },
+]
+
+export function isAxialeMulti(q: SymetrieAxialeQuestion): boolean {
+  if (q.allowMultiple === true) return true
+  return Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1
+}
+
+export const SYMETRIE_AXIALE_CORRECTION_REVIEW: {
+  questionId: string
+  status: 'needs-review' | 'checked'
+  manuscript: string
+  note: string
+}[] = [
+  {
+    questionId: 'Q1',
+    status: 'needs-review',
+    manuscript: 'A, B, C',
+    note: 'Q1 du projet est une auto-évaluation (4 options A–D, pas de multi). Clé non appliquée.',
+  },
+  {
+    questionId: 'Q2',
+    status: 'checked',
+    manuscript: 'A, B, C',
+    note: 'Choix multiples A, B, C selon consigne de passation.',
+  },
+  {
+    questionId: 'Q18',
+    status: 'checked',
+    manuscript: 'A, C',
+    note: 'Choix multiples A et C. Comptée en C2.',
+  },
+  {
+    questionId: 'Q7–Q15',
+    status: 'needs-review',
+    manuscript: 'figure originale shared-i.png',
+    note: 'Fichier public/images/geometry/symetrie-axiale/shared-i.png absent du dépôt. SVG de secours avec axe (GH) affiché. À remplacer par la figure originale dès qu’elle est disponible.',
   },
 ]
 

@@ -34,6 +34,8 @@ import {
   saveSymCentraleResult,
   levelFor,
   FigureKey,
+  isSymCentraleMulti,
+  isSymCentraleScorableQuestion,
 } from '@/lib/geometry/symetrie-centrale'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import { scoreGeometryQuestion } from '@/lib/geometry/scoring'
@@ -48,7 +50,9 @@ import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
 function isSymCentraleScorableIndex(i: number): boolean {
   const q = SYMETRIE_CENTRALE_QUESTIONS[i]
   return Boolean(
-    q && !isExcludedFromGeometryScoreAndAverage(q) && q.points > 0,
+    q &&
+      isSymCentraleScorableQuestion(q) &&
+      !isExcludedFromGeometryScoreAndAverage(q),
   )
 }
 
@@ -77,7 +81,7 @@ export function SymetrieCentraleQuiz() {
   const trialStart = useRef(0)
 
   const question = SYMETRIE_CENTRALE_QUESTIONS[current]
-  const isMulti = question?.kind === 'multi'
+  const isMulti = question ? isSymCentraleMulti(question) : false
 
   // Browser back-button protection during running phase.
   useEffect(() => {
@@ -235,7 +239,11 @@ export function SymetrieCentraleQuiz() {
         question_id: t.questionId,
         selected: t.selected,
         correct: t.correct,
-        score: t.correct ? 1 : Math.min(1, t.pointsEarned / 4),
+        score: (() => {
+          const qq = SYMETRIE_CENTRALE_QUESTIONS[t.index]
+          if (!qq || qq.points <= 0) return t.correct ? 1 : 0
+          return Math.max(0, Math.min(1, t.pointsEarned / qq.points))
+        })(),
         reaction_time_ms: t.reactionTimeMs,
       })),
       metadata: {
@@ -310,8 +318,8 @@ function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void })
           <CapacityLegend testId={SYMETRIE_CENTRALE_TEST_ID} />
         </div>
         <div className="mb-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          <strong>Barème :</strong> trois auto-évaluations (non comptées) · C1 = 12 pts ·
-          C2 = 8 pts · <strong>Total / 20</strong>.
+          <strong>Barème :</strong> auto-évaluations hors score · C1 = Q1–Q13
+          (1 pt) · C2 = Q14–Q17 (2 pts).
         </div>
         <div className="mb-6 rounded-md border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
           <Lock className="mr-1 inline h-3 w-3" />{' '}
@@ -346,9 +354,8 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
             <em>figure commune</em> avec un centre \( I \).
           </li>
           <li>
-            <strong>3.</strong> Q16 propose deux figures de construction —
-            choisissez celle qui correspond exactement à l&apos;énoncé.
-            Q17 affiche la figure obligatoire du triangle A&apos;B&apos;C&apos;.
+            <strong>3.</strong> Q16 propose deux figures — sélectionnez les deux
+            qui correspondent à l&apos;énoncé. Q17 affiche le triangle A&apos;B&apos;C&apos;.
           </li>
           <li>
             <strong>4.</strong> Quatre formats : QCM, Vrai/Faux, cases à
@@ -434,6 +441,13 @@ function TrialView({
           {(question.isDiagnostic || question.isAutoeval) && (
             <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
               ℹ️ Auto-évaluation — non comptée dans le score final.
+            </div>
+          )}
+
+          {question.keyVerified === false && (
+            <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
+              ℹ️ Réponse enregistrée ; cette question n&apos;entre pas encore dans
+              le score automatique (clé à vérifier sur le questionnaire source).
             </div>
           )}
 
@@ -566,24 +580,45 @@ const FIGURE_OVERRIDES: Partial<Record<FigureKey, string>> = {
 
 function FigureRenderer({ kind }: { kind: FigureKey }) {
   const override = FIGURE_OVERRIDES[kind]
-  if (override) {
+  const [imgFailed, setImgFailed] = useState(false)
+
+  if (kind === 'shared-i') {
+    return (
+      <div className="rounded-md border bg-white p-3 text-center">
+        {override && !imgFailed && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={override}
+            alt="Figure commune Q7 à Q13 — centre I"
+            className="mx-auto h-auto w-full max-h-[min(70vh,520px)] object-contain"
+            onError={() => setImgFailed(true)}
+          />
+        )}
+        {(!override || imgFailed) && (
+          <p className="px-4 py-10 text-sm text-amber-800">
+            Figure originale Q7–Q13 manquante. Déposez le fichier{' '}
+            <code className="text-xs">public/images/geometry/symetrie-centrale/shared-i.png</code>
+            {' '}(même image pour Q7 à Q13). Un schéma généré n&apos;est pas utilisé,
+            car il ne correspond pas aux points F, G, H de l&apos;énoncé.
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  if (override && !imgFailed) {
     return (
       <div className="rounded-md border bg-white p-3 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={override}
           alt={`Figure ${kind}`}
-          className="mx-auto max-h-80"
-          onError={(e) => {
-            // Fall back to inline SVG if the override image is missing.
-            const t = e.target as HTMLImageElement
-            t.style.display = 'none'
-          }}
+          className="mx-auto h-auto w-full max-h-[min(70vh,520px)] object-contain"
+          onError={() => setImgFailed(true)}
         />
       </div>
     )
   }
-  if (kind === 'shared-i') return <SharedFigureI />
   if (kind === 'figure-iso') return <FigureIso />
   return null
 }
@@ -848,6 +883,41 @@ function Results({
           breakdown={breakdown}
           unit="points"
         />
+
+        <div className="mb-6 max-h-64 overflow-auto rounded-md border bg-slate-50 p-3 text-left dark:bg-slate-900">
+          {trials.map((t) => {
+            const q = SYMETRIE_CENTRALE_QUESTIONS[t.index]
+            if (q?.isAutoeval) {
+              return (
+                <p key={t.index} className="border-b border-slate-200 py-2 text-xs last:border-b-0">
+                  {q.id}: Auto-évaluation
+                </p>
+              )
+            }
+            if (q?.keyVerified === false) {
+              return (
+                <p
+                  key={t.index}
+                  className="border-b border-slate-200 py-2 text-xs last:border-b-0 text-amber-800"
+                >
+                  {q.id}: enregistrée — clé à vérifier (hors barème)
+                  {q.competency ? ` (${q.competency})` : ''}
+                </p>
+              )
+            }
+            return (
+              <p
+                key={t.index}
+                className={`border-b border-slate-200 py-2 text-xs last:border-b-0 ${
+                  t.correct ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                {q?.id}: {t.correct ? '✓' : '✗'} {t.pointsEarned}/{q?.points} pt
+                {q?.competency ? ` (${q.competency})` : ''}
+              </p>
+            )
+          })}
+        </div>
 
         <div className="flex justify-center gap-3">
           <Button onClick={onExit}>

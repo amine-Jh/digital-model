@@ -454,7 +454,7 @@ export default function TeacherDashboard() {
                         Nom
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-foreground">
-                        Gmail
+                        E-mail
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-foreground">
                         Niveau scolaire

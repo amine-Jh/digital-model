@@ -11,6 +11,7 @@ import {
 import type {User} from '@supabase/supabase-js'
 import type {AuthSession, PublicRegisterRole, UserRole} from '@/lib/auth-types'
 import {getSupabaseBrowser} from '@/lib/supabase/client'
+import {isValidAuthEmail, normalizeAuthEmail} from '@/lib/auth-email'
 
 export type RegisterOutcome =
     | { ok: false; error: string }
@@ -65,9 +66,15 @@ async function buildAuthSession(user: User | null): Promise<AuthSession | null> 
 /** Initial hydration: local session only, no `getUser()` re-entry issues. */
 async function hydrateFromBrowserSession(): Promise<AuthSession | null> {
     const sb = getSupabaseBrowser()
-    const {
-        data: {session},
-    } = await sb.auth.getSession()
+    const session = await Promise.race([
+        sb.auth
+            .getSession()
+            .then((r) => r.data.session ?? null)
+            .catch(() => null),
+        new Promise<null>((resolve) => {
+            setTimeout(() => resolve(null), 4000)
+        }),
+    ])
     return buildAuthSession(session?.user ?? null)
 }
 
@@ -123,8 +130,12 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
     }, [])
 
     const login = useCallback(async (email: string, password: string) => {
+        const normalized = normalizeAuthEmail(email)
+        if (!isValidAuthEmail(normalized)) {
+            return {ok: false, error: 'Saisissez l’e-mail du compte (pas un identifiant).'}
+        }
         const sb = getSupabaseBrowser()
-        const {data, error} = await sb.auth.signInWithPassword({email, password})
+        const {data, error} = await sb.auth.signInWithPassword({email: normalized, password})
         if (error || !data.user) {
             return {ok: false, error: error?.message ?? 'Login failed'}
         }
@@ -152,16 +163,31 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
                     }
                 }
             }
+            const accountEmail = normalizeAuthEmail(email)
+            if (!isValidAuthEmail(accountEmail)) {
+                return {
+                    ok: false as const,
+                    error: 'Saisissez une adresse e-mail valide pour créer le compte.',
+                }
+            }
+            if (password.length < 6) {
+                return {
+                    ok: false as const,
+                    error: 'Le mot de passe doit contenir au moins 6 caractères.',
+                }
+            }
             const sb = getSupabaseBrowser()
             const meta: Record<string, string> = {role, full_name: fullName ?? ''}
             if (role === 'teacher' && schoolIdForTeacher) {
                 meta.school_id = schoolIdForTeacher.trim()
             }
             const {data, error} = await sb.auth.signUp({
-                email,
+                email: accountEmail,
                 password,
                 options: {
                     data: meta,
+                    emailRedirectTo:
+                        typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
                 },
             })
             if (error) {

@@ -10,7 +10,7 @@ import type { User } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { mockTests } from '@/lib/mock-data'
 import type { Database, UserRole } from '@/lib/types/database'
-import { getSupabaseAdmin } from '@/lib/supabase/server'
+import { tryGetSupabaseAdmin } from '@/lib/supabase/server'
 
 function testsDomainSlug(displayDomain: string): string {
   const d = displayDomain.toLowerCase()
@@ -27,11 +27,10 @@ export async function ensureTestSessionFkPrereqs(
   user: User,
   testId: string,
 ): Promise<EnsureFkResult> {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const admin = tryGetSupabaseAdmin()
 
-  if (serviceKey) {
+  if (admin) {
     try {
-      const admin = getSupabaseAdmin()
 
       const { data: prof } = await admin.from('profiles').select('id').eq('id', user.id).maybeSingle()
       if (!prof) {

@@ -56,21 +56,25 @@ export const CAPACITIES_BY_TEST: Record<string, CapacityDef[]> = {
   'test-geo-symetrie-axiale': [
     {
       code: 'C1',
-      label: 'reconnaissance de la similarité des formes géométriques',
+      label:
+        'Reconnaître la similarité des formes géométriques à l\'aide de la symétrie',
     },
     {
       code: 'C2',
-      label: 'utilisation de la symétrie axiale dans la résolution de problèmes',
+      label:
+        'L\'utilisation de la symétrie dans la résolution des problèmes géométriques',
     },
   ],
   'test-geo-central-sym': [
     {
       code: 'C1',
-      label: 'reconnaissance de la similarité des formes géométriques',
+      label:
+        'Reconnaître la similarité des formes géométriques à l\'aide de la symétrie',
     },
     {
       code: 'C2',
-      label: 'utilisation de la symétrie centrale dans la résolution de problèmes',
+      label:
+        'L\'utilisation de la symétrie dans la résolution des problèmes géométriques',
     },
   ],
   'test-geo-line-plane': [

@@ -10,7 +10,7 @@
  * Backed by public.student_profiles. NO local student-profiles.json.
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseServer, getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabaseServer } from '@/lib/supabase/server'
 import type { StudentAcademicProfile } from '@/lib/student-profile-types'
 import type { Database } from '@/lib/types/database'
 
@@ -92,8 +92,7 @@ export async function PUT(request: Request) {
       )
     }
 
-    const admin = getSupabaseAdmin()
-    const { data: schoolRow, error: schoolErr } = await admin
+    const { data: schoolRow, error: schoolErr } = await sb
       .from('schools')
       .select('id, name')
       .eq('id', rawSid)
@@ -104,7 +103,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Établissement introuvable ou inactif.' }, { status: 400 })
     }
 
-    const { data: teacherRow, error: teacherErr } = await admin
+    const { data: teacherRow, error: teacherErr } = await sb
       .from('profiles')
       .select('id, full_name, email, school_id')
       .eq('id', teacherId)

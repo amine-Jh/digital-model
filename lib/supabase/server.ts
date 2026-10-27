@@ -12,12 +12,17 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/types/database'
+import {
+  getSupabaseAnonKey,
+  getSupabaseServiceRoleKey,
+  getSupabaseUrl,
+} from '@/lib/supabase/env'
 
 export async function getSupabaseServer() {
   const cookieStore = await cookies()
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     {
       cookies: {
         getAll() {
@@ -38,17 +43,36 @@ export async function getSupabaseServer() {
   )
 }
 
-/**
- * Privileged client. Bypasses RLS — only call from secure server contexts
- * (cron, admin Route Handlers protected by an admin role check, etc.).
- */
-export function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+/** Unprivileged client (anon/publishable key). Public reads + Auth signUp. */
+export function getSupabasePublic() {
+  const url = getSupabaseUrl()
+  const key = getSupabaseAnonKey()
   if (!url || !key) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY for admin client')
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or anon/publishable key')
   }
   return createClient<Database>(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+}
+
+function createServiceRoleClient() {
+  const url = getSupabaseUrl()
+  const key = getSupabaseServiceRoleKey()
+  if (!url || !key) return null
+  return createClient<Database>(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+
+/** Privileged client when a service_role / secret key is configured; otherwise null. */
+export function tryGetSupabaseAdmin() {
+  return createServiceRoleClient()
+}
+
+export function getSupabaseAdmin() {
+  const client = createServiceRoleClient()
+  if (!client) {
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY for admin client')
+  }
+  return client
 }

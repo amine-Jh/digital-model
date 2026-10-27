@@ -7,8 +7,10 @@ export const GEOMETRY_DOMAIN_LESSON_IDS = [
   'test-geo-central-sym',
   'test-geo-symetrie-axiale',
   'test-geo-vectors-complete',
+  'test-geo-line-plane',
   'test-geo-space',
   'test-geo-produit-scalaire',
+  'test-geo-space-volumes',
 ] as const
 
 export type GeometryLessonId = (typeof GEOMETRY_DOMAIN_LESSON_IDS)[number]
@@ -39,7 +41,7 @@ export function getCanonicalPartIndex(
       const m = /^Q(\d+)$/.exec(id)
       if (!m) return null
       const n = Number(m[1])
-      if (n >= 2 && n <= 8) return 1
+      if (n >= 1 && n <= 8) return 1
       if (n >= 9 && n <= 13) return 2
       if (n >= 14) return 3
       return null
@@ -59,6 +61,13 @@ export function getCanonicalPartIndex(
       if (p === 'reasoning') return 3
       return null
     }
+    case 'test-geo-line-plane': {
+      const n = typeof q.number === 'number' ? q.number : 0
+      if (n <= 0) return null
+      if (n <= 6) return 1
+      if (n <= 9) return 2
+      return 3
+    }
     case 'test-geo-space': {
       const p = q.part
       if (p === 'course') return 1
@@ -71,6 +80,13 @@ export function getCanonicalPartIndex(
       if (n <= 8) return 1
       if (n <= 16) return 2
       return 3
+    }
+    case 'test-geo-space-volumes': {
+      const p = q.part
+      if (p === 'course') return 1
+      if (p === 'application') return 2
+      if (p === 'reasoning') return 3
+      return null
     }
     default:
       return null
@@ -93,6 +109,11 @@ const PART_TITLES: Record<string, Record<CanonicalPart, string>> = {
     2: 'Partie II — Construction sur figure (Q8–Q18) et auto-évaluation démonstration',
     3: 'Partie III — Raisonnement (Q19–Q21)',
   },
+  'test-geo-line-plane': {
+    1: 'Partie I — Auto-évaluation et cours (Q1–Q6)',
+    2: 'Partie II — Construction (Q7–Q9)',
+    3: 'Partie III — Raisonnement (Q10–Q13)',
+  },
   'test-geo-space': {
     1: 'Partie I — Cours et visualisation spatiale (Q1–Q18)',
     2: 'Partie II — Raisonnement spatial (Q19–Q21)',
@@ -102,6 +123,11 @@ const PART_TITLES: Record<string, Record<CanonicalPart, string>> = {
     1: 'Partie I — Questions du cours (Q1–Q8)',
     2: 'Partie II — Visualisation et construction (Q9–Q16)',
     3: 'Partie III — Raisonnement (Q17–Q28)',
+  },
+  'test-geo-space-volumes': {
+    1: 'Partie I — Questions du cours (Q1–Q5)',
+    2: 'Partie II — Questions d\'application (Q6–Q10)',
+    3: 'Partie III — Questions de raisonnement (Q11–Q15)',
   },
 }
 

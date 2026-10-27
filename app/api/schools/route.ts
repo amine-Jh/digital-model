@@ -3,13 +3,13 @@
  * Used by registration (teacher) and student profile setup.
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabasePublic } from '@/lib/supabase/server'
 import type { PublicSchool } from '@/lib/school-directory'
 
 export async function GET() {
   try {
-    const admin = getSupabaseAdmin()
-    const { data, error } = await admin
+    const sb = getSupabasePublic()
+    const { data, error } = await sb
       .from('schools')
       .select('id, name, city')
       .eq('is_active', true)

@@ -7,14 +7,15 @@
  *   - Manuels scolaires marocains (MENFP)
  *
  * Compétences :
- *   C1 — Reconnaître les propriétés et figures liées à la symétrie centrale (Q2 → Q13)
- *   C2 — Utiliser la symétrie centrale dans la résolution de problèmes (Q14 → Q17)
+ *   C1 — Reconnaître la similarité des formes géométriques à l'aide de la
+ *        symétrie (Q1 → Q13)
+ *   C2 — L'utilisation de la symétrie dans la résolution des problèmes
+ *        géométriques (Q14 → Q17)
  *
- * Barème :
- *   Auto-évaluations (AE1, AE2, AE3) : 0 pt — non comptées dans le score ni les moyennes
- *   Q2 → Q13  (C1)   : 1 pt chacune  → /12
- *   Q14 → Q17 (C2)   : 2 pts chacune → /8
- *   Total : 20 pts
+ * Barème (identique aux autres leçons : fraction [0,1] × points) :
+ *   Auto-évaluations (AE1, AE2, AE3) : 0 pt
+ *   Q1 → Q13  (C1) : 1 pt
+ *   Q14 → Q17 (C2) : 2 pts
  *
  * Navigation : linéaire stricte — pas de retour arrière une fois la
  * question validée (mode examen sécurisé).
@@ -50,6 +51,8 @@ export interface SymCentraleQuestion {
   isDiagnostic?: boolean
   /** Auto-évaluations : jamais comptées dans le score ni les moyennes. */
   isAutoeval?: boolean
+  /** false → réponse enregistrée, hors barème (clé non vérifiée). */
+  keyVerified?: boolean
 }
 
 export interface SymCentraleTrialResult {
@@ -100,7 +103,24 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     isAutoeval: true,
   },
 
-  // ─── C1 : Reconnaître (Q2 → Q13) — 1 pt ───────────────────────────────────
+  // ─── C1 : Q1 → Q13 — 1 pt ────────────────────────────────────────────────
+  {
+    id: 'Q1',
+    number: 1,
+    competency: 'C1',
+    kind: 'mcq',
+    question:
+      'L\'image du point \\( A \\) par la symétrie centrale de centre \\( O \\) est le point \\( A\' \\) tel que :',
+    options: [
+      '\\( OA = OA\' \\)',
+      '\\( O \\) est le milieu de \\( [AA\'] \\)',
+      '\\( AA\' \\) est perpendiculaire à \\( (OA) \\)',
+      '\\( OA = 2\\cdot OA\' \\)',
+      'Je ne sais pas',
+    ],
+    correctAnswer: 1,
+    points: 1,
+  },
   {
     id: 'Q2',
     number: 2,
@@ -203,9 +223,9 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     question:
       'Sur la figure ci-dessous (centre \\( I \\)), parmi les affirmations suivantes, laquelle est vraie ?',
     options: [
-      'Le symétrique du point \\( A \\) est le point \\( F \\) — faux',
-      'Le symétrique du point \\( A \\) est le point \\( C \\) — vrai',
-      'Le symétrique du point \\( G \\) est le point \\( H \\) — faux',
+      'Le symétrique du point \\( A \\) est le point \\( F \\)',
+      'Le symétrique du point \\( A \\) est le point \\( C \\)',
+      'Le symétrique du point \\( G \\) est le point \\( H \\)',
       'Aucune réponse',
     ],
     correctAnswer: 1,
@@ -338,7 +358,7 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
       '\\( [AB] \\) est le symétrique de \\( [CD] \\) par rapport à \\( I \\)',
       'Je ne sais pas',
     ],
-    correctAnswer: [0, 1],
+    correctAnswer: [0, 1, 2],
     points: 2,
   },
   {
@@ -347,15 +367,13 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     competency: 'C2',
     kind: 'image-choice',
     question:
-      'Soit \\( ABC \\) un triangle équilatéral tel que \\( AB = 6 \\). Soient \\( I \\) le milieu de \\( [AC] \\), \\( J \\) le milieu de \\( [AB] \\), \\( K \\) le milieu de \\( [BC] \\). On note \\( B\' \\) le symétrique de \\( B \\) par rapport à \\( I \\), \\( A\' \\) le symétrique de \\( A \\) par rapport à \\( K \\), et \\( C\' \\) le symétrique de \\( C \\) par rapport à \\( J \\). Choisir la figure qui représente correctement la construction.',
-    options: ['Figure A', 'Figure B', 'Figure C', 'Figure D'],
+      'Soit \\( ABC \\) un triangle équilatéral tel que \\( AB = 6 \\). Soient \\( I \\) le milieu de \\( [AC] \\), \\( J \\) le milieu de \\( [AB] \\), \\( K \\) le milieu de \\( [BC] \\). On note \\( B\' \\) le symétrique de \\( B \\) par rapport à \\( I \\), \\( A\' \\) le symétrique de \\( A \\) par rapport à \\( K \\), et \\( C\' \\) le symétrique de \\( C \\) par rapport à \\( J \\). Sélectionner les deux figures qui représentent correctement la construction.',
+    options: ['Figure A', 'Figure B'],
     optionImages: [
       '/images/geometry/symetrie-centrale/q16-option-1.png',
       '/images/geometry/symetrie-centrale/q16-option-2.png',
-      '/images/geometry/symetrie-centrale/q16-option-3.png',
-      '/images/geometry/symetrie-centrale/q16-option-4.png',
     ],
-    correctAnswer: 0,
+    correctAnswer: [0, 1],
     points: 2,
   },
   {
@@ -385,6 +403,43 @@ export function arrayEquals(a: number[], b: number[]) {
   const bs = [...b].sort()
   return as.every((v, i) => v === bs[i])
 }
+
+export function isSymCentraleMulti(q: SymCentraleQuestion): boolean {
+  if (q.kind === 'multi') return true
+  if (q.kind === 'image-choice' && Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1) {
+    return true
+  }
+  return Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1
+}
+
+export function isSymCentraleScorableQuestion(q: SymCentraleQuestion): boolean {
+  if (q.isAutoeval || q.isDiagnostic) return false
+  if (q.keyVerified === false) return false
+  if (q.correctAnswer === null) return false
+  return q.points > 0
+}
+
+export const SYMETRIE_CENTRALE_CORRECTION_REVIEW: {
+  questionId: string
+  status: 'needs-review'
+  manuscript: string
+  note: string
+}[] = [
+  {
+    questionId: 'Q7',
+    status: 'needs-review',
+    manuscript: 'B, après modification de figure',
+    note:
+      'Clé B enregistrée. Figure source absente du dépôt (shared-i.png). Le SVG de secours n’a pas les points F, G, H — à remplacer par la figure originale.',
+  },
+  {
+    questionId: 'Q16',
+    status: 'needs-review',
+    manuscript: 'A et B (deux figures)',
+    note:
+      'Sélection multiple A+B. Fichiers q16-option-1.png et q16-option-2.png à confirmer sur le questionnaire source.',
+  },
+]
 
 export function gradeAnswer(q: SymCentraleQuestion, selected: number[]): boolean {
   if (q.correctAnswer === null) return false

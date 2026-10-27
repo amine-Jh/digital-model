@@ -1,9 +1,8 @@
 /**
  * POST /api/auth/register
  *
- * Creates an account in Supabase Auth (auth.users). The handle_new_user()
- * Postgres trigger creates the matching public.profiles row. NO local
- * users.json — that legacy store is no longer touched.
+ * Creates an account via Supabase Auth signUp (anon/publishable key).
+ * The handle_new_user() trigger creates public.profiles.
  *
  * Body:
  *   {
@@ -12,28 +11,27 @@
  *     role: 'student' | 'teacher',
  *     firstName?: string,
  *     lastName?: string,
+ *     schoolId?: string,       // required conceptually for teachers
  *   }
- *
- * Response:
- *   { ok: true, user: { id, username, role } }
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabasePublic } from '@/lib/supabase/server'
+import { isValidAuthEmail, normalizeAuthEmail } from '@/lib/auth-email'
 import type { UserRole } from '@/lib/auth-types'
 
-/** Public self-registration only; admins are provisioned by a super_admin. */
 const VALID_ROLES: UserRole[] = ['student', 'teacher']
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const email = String(body.username ?? body.email ?? '').trim().toLowerCase()
+    const email = normalizeAuthEmail(String(body.username ?? body.email ?? ''))
     const password = String(body.password ?? '')
     const role = (body.role ?? 'student') as UserRole
     const firstName = body.firstName ? String(body.firstName).trim() : ''
     const lastName = body.lastName ? String(body.lastName).trim() : ''
+    const schoolId = body.schoolId ? String(body.schoolId).trim() : ''
 
-    if (!email.includes('@') || password.length < 6) {
+    if (!isValidAuthEmail(email) || password.length < 6) {
       return NextResponse.json(
         { error: 'A valid email and a password (min 6 chars) are required.' },
         { status: 400 },
@@ -44,15 +42,16 @@ export async function POST(request: Request) {
     }
 
     const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
-    const admin = getSupabaseAdmin()
+    const meta: Record<string, string> = { role, full_name: fullName }
+    if (role === 'teacher' && schoolId) {
+      meta.school_id = schoolId
+    }
 
-    // Create the auth.users row. email_confirm: true skips email verification
-    // (turn OFF in production once SMTP is configured).
-    const { data, error } = await admin.auth.admin.createUser({
+    const sb = getSupabasePublic()
+    const { data, error } = await sb.auth.signUp({
       email,
       password,
-      email_confirm: true,
-      user_metadata: { role, full_name: fullName },
+      options: { data: meta },
     })
 
     if (error || !data.user) {
@@ -63,14 +62,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // The handle_new_user() trigger fired and created the profiles row.
-    // We force-update role + full_name as a safety net in case the trigger
-    // ever changes or the user_metadata payload is dropped.
-    await admin
-      .from('profiles')
-      .update({ role, full_name: fullName || null })
-      .eq('id', data.user.id)
-
     return NextResponse.json({
       ok: true,
       user: {
@@ -78,6 +69,7 @@ export async function POST(request: Request) {
         username: data.user.email ?? email,
         role,
       },
+      needsEmailConfirmation: !data.session,
     })
   } catch (err) {
     console.error('[auth/register]', err)

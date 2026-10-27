@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/lib/auth-context'
+import { isValidAuthEmail, normalizeAuthEmail } from '@/lib/auth-email'
 import type { PublicRegisterRole } from '@/lib/auth-types'
 import type { PublicSchool } from '@/lib/school-directory'
 import { Brain, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
@@ -65,9 +66,15 @@ export default function RegisterPage() {
 
     // useAuth().register() → Supabase signUp. If "Confirm email" is on in
     // Supabase, there is no session until the user clicks the link.
+    const accountEmail = normalizeAuthEmail(email)
+    if (!isValidAuthEmail(accountEmail)) {
+      setError('Saisissez une adresse e-mail valide (tout fournisseur).')
+      setLoading(false)
+      return
+    }
     const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
     const res = await register(
-      email.trim(),
+      accountEmail,
       password,
       role,
       fullName,
@@ -81,7 +88,7 @@ export default function RegisterPage() {
     }
 
     if (res.needsEmailConfirmation) {
-      setPendingEmail(email.trim())
+      setPendingEmail(accountEmail)
       return
     }
 
@@ -195,9 +202,8 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Gmail */}
             <div className="space-y-2">
-              <Label htmlFor="email">Gmail</Label>
+              <Label htmlFor="email">E-mail</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -207,11 +213,15 @@ export default function RegisterPage() {
                   className="pl-10"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="prenom.nom@gmail.com"
+                  placeholder="prenom.nom@ecole.ma"
                   required
                   autoComplete="email"
                 />
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Utilisez votre adresse e-mail (Gmail, établissement, ou tout autre fournisseur).
+                Elle servira aussi à vous connecter.
+              </p>
             </div>
 
             {/* Password */}
@@ -226,7 +236,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={4}
+                  minLength={6}
                   autoComplete="new-password"
                 />
               </div>

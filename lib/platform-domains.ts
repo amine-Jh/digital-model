@@ -172,6 +172,14 @@ export const platformDomains: MainDomain[] = [
         ],
       },
       {
+        id: 'geo-space-volumes',
+        name: 'Géométrie dans l\'espace : volumes',
+        nameFr: 'Géométrie dans l\'espace : volumes',
+        capacities: [
+          { id: 'geo-space-volumes-cap', name: 'Space geometry volumes', nameFr: 'Géométrie dans l\'espace : volumes', testId: 'test-geo-space-volumes' },
+        ],
+      },
+      {
         id: 'geo-produit-scalaire',
         name: 'Produit scalaire',
         nameFr: 'Produit scalaire',
