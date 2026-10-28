@@ -13,8 +13,6 @@ import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
 const PROTECTED_PREFIXES = [
   '/profile',
   '/profile-setup',
-  '/tests',
-  '/results',
   '/teacher',
   '/admin',
   '/analytics',
