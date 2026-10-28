@@ -101,7 +101,15 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
                 if (!cancelled) setLoading(false)
             })
 
-        const sb = getSupabaseBrowser()
+        let sb
+        try {
+            sb = getSupabaseBrowser()
+        } catch {
+            return () => {
+                cancelled = true
+                clearTimeout(safety)
+            }
+        }
         const {data: sub} = sb.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT') {
                 queueMicrotask(() => {
@@ -134,10 +142,26 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
         if (!isValidAuthEmail(normalized)) {
             return {ok: false, error: 'Saisissez l’e-mail du compte (pas un identifiant).'}
         }
-        const sb = getSupabaseBrowser()
+        let sb
+        try {
+            sb = getSupabaseBrowser()
+        } catch (e) {
+            return {
+                ok: false,
+                error: e instanceof Error ? e.message : 'Supabase is not configured.',
+            }
+        }
         const {data, error} = await sb.auth.signInWithPassword({email: normalized, password})
         if (error || !data.user) {
-            return {ok: false, error: error?.message ?? 'Login failed'}
+            const raw = error?.message ?? 'Login failed'
+            if (/email not confirmed/i.test(raw)) {
+                return {
+                    ok: false,
+                    error:
+                        'E-mail non confirmé. Ouvrez le lien reçu, ou désactivez « Confirm email » dans Supabase Auth.',
+                }
+            }
+            return {ok: false, error: raw}
         }
         const session = await buildAuthSession(data.user)
         if (!session) return {ok: false, error: 'Profile lookup failed'}
@@ -176,7 +200,15 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
                     error: 'Le mot de passe doit contenir au moins 6 caractères.',
                 }
             }
-            const sb = getSupabaseBrowser()
+            let sb
+            try {
+                sb = getSupabaseBrowser()
+            } catch (e) {
+                return {
+                    ok: false as const,
+                    error: e instanceof Error ? e.message : 'Supabase is not configured.',
+                }
+            }
             const meta: Record<string, string> = {role, full_name: fullName ?? ''}
             if (role === 'teacher' && schoolIdForTeacher) {
                 meta.school_id = schoolIdForTeacher.trim()

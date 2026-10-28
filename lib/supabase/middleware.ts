@@ -3,7 +3,7 @@
  *
  * Runs on every request, refreshes the Supabase session cookie if it's
  * expiring, and guards the routes listed in PROTECTED_PREFIXES. Imported
- * by the root `proxy.ts` (Next.js proxy convention).
+ * by the root `middleware.ts` (Edge-compatible; required on Netlify).
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
