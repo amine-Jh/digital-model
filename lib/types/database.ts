@@ -1,9 +1,8 @@
 /**
  * Database type definitions.
  *
- * These types match the schema in supabase/schema.sql (and
- * supabase/migrations/0001_baseline.sql). Once the project
- * is connected to Supabase you should regenerate them with:
+ * These types match the schema in supabase/setup.sql. Once the
+ * project is connected to Supabase you can regenerate them with:
  *
  *   npx supabase gen types typescript \
  *     --project-id <your-project-ref> > lib/types/database.ts
@@ -177,21 +176,6 @@ export interface Database {
         }
         Insert: StudentProfilesInsert
         Update: Partial<StudentProfilesInsert>
-        Relationships: []
-      }
-
-      students: {
-        Row: {
-          id: number
-          created_at: string
-        }
-        Insert: {
-          id?: never
-          created_at?: string
-        }
-        Update: {
-          created_at?: string
-        }
         Relationships: []
       }
 

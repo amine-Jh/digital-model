@@ -3,9 +3,8 @@ import type { Database } from '@/lib/types/database'
 import { parseGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
 
 /**
- * Mirrors `metadata.geometryAnalytics` into normalized tables (when migration
- * `supabase/migrations/0005_geometry_session_analytics.sql` has been applied).
- * Safe no-op on failure.
+ * Mirrors `metadata.geometryAnalytics` into normalized tables (created by
+ * `supabase/setup.sql`). Safe no-op on failure.
  */
 export async function persistGeometryAnalyticsRows(
   sb: SupabaseClient<Database>,

@@ -55,9 +55,9 @@ export async function POST(request: Request) {
     const fullName = body.fullName ? String(body.fullName).trim() : ''
     const schoolId = String(body.schoolId ?? '').trim()
 
-    if (!email.includes('@') || password.length < 6) {
+    if (!email.includes('@') || password.length < 8) {
       return NextResponse.json(
-        { error: 'E-mail valide et mot de passe (min. 6 caractères) requis.' },
+        { error: 'E-mail valide et mot de passe (min. 8 caractères) requis.' },
         { status: 400 },
       )
     }

@@ -49,7 +49,7 @@ async function buildAuthSession(user: User | null): Promise<AuthSession | null> 
         .select('role, full_name')
         .eq('id', user.id)
         .maybeSingle()
-    const meta = user.user_metadata as {full_name?: string; role?: string} | undefined
+    const meta = user.user_metadata as {full_name?: string} | undefined
     const fromProfile = profile?.full_name?.trim()
     const fromMeta =
         typeof meta?.full_name === 'string' ? meta.full_name.trim() : ''
@@ -58,7 +58,8 @@ async function buildAuthSession(user: User | null): Promise<AuthSession | null> 
         userId: user.id,
         username: user.email ?? '',
         displayName,
-        role: (profile?.role ?? (meta?.role as UserRole) ?? 'student') as UserRole,
+        // Role comes only from `profiles` (user_metadata is user-editable).
+        role: (profile?.role ?? 'student') as UserRole,
     }
 }
 

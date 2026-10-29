@@ -193,14 +193,14 @@ export default function AdminTeachersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="t-pass">Mot de passe (min. 6)</Label>
+              <Label htmlFor="t-pass">Mot de passe (min. 8)</Label>
               <Input
                 id="t-pass"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
             <div className="space-y-2">

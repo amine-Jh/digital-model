@@ -2,7 +2,7 @@
  * `test_sessions` FK requires `user_id → profiles.id` and `test_id → tests.id`.
  * PostgREST often surfaces FK / unique violations as HTTP 409.
  *
- * When `SUPABASE_SERVICE_ROLE_KEY` is set, we heal missing rows (dev / small teams).
+ * When `SUPABASE_SECRET_KEY` is set, we heal missing rows (dev / small teams).
  * Otherwise we return a clear 400-style message so the API can respond readably.
  */
 
@@ -10,7 +10,9 @@ import type { User } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { mockTests } from '@/lib/mock-data'
 import type { Database, UserRole } from '@/lib/types/database'
-import { getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabaseAdmin, hasSupabaseSecretKey } from '@/lib/supabase/server'
+
+const TEST_ID_PATTERN = /^test-[a-z0-9-]{1,80}$/
 
 function testsDomainSlug(displayDomain: string): string {
   const d = displayDomain.toLowerCase()
@@ -27,22 +29,19 @@ export async function ensureTestSessionFkPrereqs(
   user: User,
   testId: string,
 ): Promise<EnsureFkResult> {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (serviceKey) {
+  if (hasSupabaseSecretKey()) {
     try {
       const admin = getSupabaseAdmin()
 
       const { data: prof } = await admin.from('profiles').select('id').eq('id', user.id).maybeSingle()
       if (!prof) {
-        const meta = user.user_metadata as { full_name?: string; role?: string } | undefined
+        const meta = user.user_metadata as { full_name?: string } | undefined
         const email =
           (typeof user.email === 'string' && user.email.trim() !== ''
             ? user.email.trim()
             : `user-${user.id.slice(0, 8)}@pending.local`) || `user-${user.id.slice(0, 8)}@pending.local`
-        const r = meta?.role
-        const role: UserRole =
-          r === 'admin' || r === 'super_admin' || r === 'teacher' || r === 'student' ? r : 'student'
+        // user_metadata is writable by the user themself — never derive privileges from it.
+        const role: UserRole = 'student'
         const { error: pErr } = await admin.from('profiles').insert({
           id: user.id,
           email,
@@ -57,6 +56,9 @@ export async function ensureTestSessionFkPrereqs(
 
       const { data: testRow } = await admin.from('tests').select('id').eq('id', testId).maybeSingle()
       if (!testRow) {
+        if (!TEST_ID_PATTERN.test(testId)) {
+          return { ok: false, status: 400, message: `Invalid test_id "${testId}".` }
+        }
         const mock = mockTests.find((t) => t.id === testId)
         const { error: tErr } = await admin.from('tests').upsert(
           {
@@ -65,7 +67,8 @@ export async function ensureTestSessionFkPrereqs(
             domain: mock ? testsDomainSlug(mock.domain) : 'cognitive-capacity',
             description: mock ? 'Synced from app mockTests' : 'Auto-created for FK',
             metadata: {},
-            is_active: true,
+            // Unknown ids only satisfy the FK; they must not appear in the student catalogue.
+            is_active: Boolean(mock),
           },
           { onConflict: 'id' },
         )
@@ -77,9 +80,7 @@ export async function ensureTestSessionFkPrereqs(
       return { ok: true }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      if (!msg.includes('SERVICE_ROLE')) {
-        return { ok: false, status: 500, message: msg }
-      }
+      return { ok: false, status: 500, message: msg }
     }
   }
 
@@ -88,7 +89,7 @@ export async function ensureTestSessionFkPrereqs(
     return {
       ok: false,
       status: 400,
-      message: `Unknown test_id "${testId}" in public.tests. Run supabase/seed.sql (or set SUPABASE_SERVICE_ROLE_KEY so the app can upsert catalogue rows).`,
+      message: `Unknown test_id "${testId}" in public.tests. Re-run supabase/setup.sql (or set SUPABASE_SECRET_KEY so the app can upsert catalogue rows).`,
     }
   }
 
@@ -98,7 +99,7 @@ export async function ensureTestSessionFkPrereqs(
       ok: false,
       status: 400,
       message:
-        'No public.profiles row for this user. Sign-up should create it via trigger; set SUPABASE_SERVICE_ROLE_KEY for auto-provision in dev.',
+        'No public.profiles row for this user. Sign-up should create it via trigger; set SUPABASE_SECRET_KEY for auto-provision in dev.',
     }
   }
 
