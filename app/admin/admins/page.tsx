@@ -145,14 +145,14 @@ export default function PlatformAdminsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="adm-pass">Mot de passe (min. 6 caractères)</Label>
+              <Label htmlFor="adm-pass">Mot de passe (min. 8 caractères)</Label>
               <Input
                 id="adm-pass"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 autoComplete="new-password"
               />
             </div>

@@ -1,11 +1,16 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/lib/types/database'
+<<<<<<< Updated upstream
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
+=======
+import { getSupabasePublishableKey, getSupabaseUrl } from '@/lib/supabase/env'
+>>>>>>> Stashed changes
 
 let _client: ReturnType<typeof createBrowserClient<Database>> | null = null
 
 export function getSupabaseBrowser() {
   if (_client) return _client
+<<<<<<< Updated upstream
   const url = getSupabaseUrl()
   const key = getSupabaseAnonKey()
   if (!url || !key) {
@@ -14,5 +19,8 @@ export function getSupabaseBrowser() {
     )
   }
   _client = createBrowserClient<Database>(url, key)
+=======
+  _client = createBrowserClient<Database>(getSupabaseUrl(), getSupabasePublishableKey())
+>>>>>>> Stashed changes
   return _client
 }

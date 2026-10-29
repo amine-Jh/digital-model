@@ -30,9 +30,10 @@ The repo is a **Next.js 16 App Router** application with **React 19**, **TypeScr
 
 **Environment variables (typical):**
 
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — browser + server user-scoped client.
-- `SUPABASE_SERVICE_ROLE_KEY` — **server only** (`getSupabaseAdmin()`); used e.g. for `POST /api/auth/register`.
-- Optional: `.env` present when building locally.
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — browser + server user-scoped client (RLS applies).
+- `SUPABASE_SECRET_KEY` — **server only** (`getSupabaseAdmin()`, guarded by `server-only`); admin Route Handlers, `/api/schools`, `/api/teachers`.
+- Resolution + legacy fallbacks (`*_ANON_KEY`, `*_SERVICE_ROLE_KEY`) live in `lib/supabase/env.ts`.
+- **New project from scratch:** follow [`docs/SUPABASE-SETUP.md`](SUPABASE-SETUP.md) (single script `supabase/setup.sql`).
 
 **Package metadata:** `package.json` still names the package `my-project` — consider renaming for production clarity.
 
@@ -112,7 +113,7 @@ flowchart TB
 | **Generic MCQ / shared bank** | `GenericTestRunner` submits | `POST /api/submissions` — server scores against `mockTestQuestions` / embedded MCQs, inserts `test_sessions` + `trial_results`. |
 | **Dedicated quizzes** (geometry, some batteries) | Client finishes flow | `startSession` / `finishSession` in `lib/results/results-service.ts` — browser client inserts/updates `test_sessions` and inserts `trial_results`. |
 
-**FK rules:** `test_sessions.test_id` → `public.tests(id)`; `test_sessions.user_id` → `public.profiles(id)`. Seed `supabase/seed.sql` so every app `test_id` exists in `public.tests`.
+**FK rules:** `test_sessions.test_id` → `public.tests(id)`; `test_sessions.user_id` → `public.profiles(id)`. The catalogue section of `supabase/setup.sql` must list every app `test_id`.
 
 ### 3.5 Legacy / hybrid storage
 
@@ -125,12 +126,12 @@ Dedicated batteries (Beery, TVPS, visuo-constructive, many attention/memory help
 | Path | Role |
 |------|------|
 | `app/` | Routes: landing, dashboards, domains, tests, results, teacher, admin, analytics, profile, register |
-| `app/api/` | `auth/login`, `auth/logout`, `auth/register`, `submissions`, `student-profile`, `lesson-results` |
+| `app/api/` | `auth/login`, `auth/logout`, `submissions`, `test-sessions/complete`, `student-profile`, `lesson-results`, `schools`, `teachers`, `admin/*` (super-admin) |
 | `components/` | Feature UIs (`beery-vmi`, `tvps`, `visuo-constructive`, attentional, memory, geometry, admin, …) + `components/ui/` |
 | `lib/` | Domain logic, test IDs, scoring, **`tests-catalog.ts`**, **`results/results-service.ts`**, **`student-test-progress.ts`**, Supabase clients (`supabase/*`), `mock-data.ts`, i18n, psychometrics |
 | `hooks/` | `use-toast`, `use-mobile`, **`use-tests-catalog`** (Supabase catalogue + mock merge), etc. |
 | `public/` | Static assets, PWA manifest, icons |
-| `supabase/` | SQL schema / seeds (if present) — align DB with `lib/types/database.ts` |
+| `supabase/` | `setup.sql` — the single idempotent script (schema, RLS, grants, catalogue); align with `lib/types/database.ts` |
 | `tools/` | Offline datasets / scripts (not runtime-critical) |
 | `.cursor/rules/` | Workspace rules for CogniTest (short-circuit pattern for `/tests/[testId]`) |
 
@@ -179,7 +180,7 @@ Dedicated batteries (Beery, TVPS, visuo-constructive, many attention/memory help
 1. `lib/<name>.ts` — `TEST_ID`, types, any storage keys.
 2. `components/<name>/` — UI; **early return** in `app/tests/[testId]/page.tsx`.
 3. **`mockTests`** (and optional inline `questions`) in `lib/mock-data.ts` — required for merge, generic runner, and **`POST /api/submissions`** scoring.
-4. **`public.tests`** row (seed or migration) — required for **FK** on `test_sessions.test_id`.
+4. **`public.tests`** row (add to section 8 of `supabase/setup.sql` and re-run it) — required for **FK** on `test_sessions.test_id`.
 5. **`lib/platform-domains.ts`** if the capacity appears under `/domains` (student tree).
 6. Optional: `app/results/<slug>/page.tsx` for a dedicated results route.
 
@@ -217,7 +218,8 @@ Charts on `/results` group by **`mockTests`-style domain labels** after merge. *
 ## 9. Authentication
 
 - **Client:** `lib/auth-context.tsx` — Supabase `signInWithPassword`, `signUp`, `signOut`; `profiles` lookup for `role` and display name; exposes `AuthSession` (`userId`, `username`, `role`, …).
-- **Server registration:** `POST /api/auth/register` may use **admin** client; tighten email confirmation and role policies for production.
+- **Registration:** browser `supabase.auth.signUp`; the `handle_new_user` trigger only allows `student` / `teacher`. Admins are created by a super-admin (`/admin/admins`).
+- **Role enforcement:** `proxy.ts` gates `/admin`, `/teacher`, `/analytics`, `/reports` by `profiles.role`; RLS + the `trg_profiles_guard` trigger enforce it in the database.
 - **Types:** `lib/auth-types.ts`; DB schema in `lib/types/database.ts` (regenerate from Supabase when schema changes).
 
 ---
@@ -262,11 +264,11 @@ Use this as a backlog; prioritize by deployment target (internal study vs public
 
 ### Security & compliance
 
-- [ ] **Service role:** Ensure `SUPABASE_SERVICE_ROLE_KEY` never ships to the client; audit all route handlers.
-- [ ] **Registration policy:** Disable open `admin` self-signup unless intended; add server-side role allowlist or invite-only flow.
+- [x] **Secret key:** `lib/supabase/server.ts` imports `server-only`; the key never ships to the client.
+- [x] **Registration policy:** signup can only create `student` / `teacher`; only a super-admin can change roles.
 - [ ] **Email confirmation:** Turn on Supabase email confirmation and SMTP for real deployments.
 - [ ] **Rate limiting** on `/api/auth/*` and submission endpoints (edge middleware or API gateway).
-- [ ] **RLS review:** Confirm policies for `test_sessions`, `trial_results`, `student_profiles`, `profiles` match product rules (teacher sees only assigned students, etc.).
+- [x] **RLS review:** policies in `supabase/setup.sql` (teacher sees only assigned students, anon has no table access, `my_students` is `security_invoker`).
 
 ### Reliability & quality
 
@@ -280,7 +282,7 @@ Use this as a backlog; prioritize by deployment target (internal study vs public
 
 - [ ] **Observability:** Structured logging, error reporting (Sentry/OpenTelemetry), RUM beyond Vercel Analytics.
 - [ ] **Health checks:** `/api/health` for orchestrators.
-- [ ] **Database migrations:** Single source of truth (`supabase/migrations` or hosted migration pipeline); regenerate `lib/types/database.ts` from schema.
+- [x] **Database setup:** single source of truth is `supabase/setup.sql`; regenerate `lib/types/database.ts` after schema changes.
 - [ ] **Multi lockfile / monorepo root:** Next may infer wrong workspace root if parent `package-lock.json` exists — set `turbopack.root` or isolate repo (build emitted a warning).
 - [x] **Proxy convention:** Root `middleware.ts` migrated to **`proxy.ts`** (`export function proxy`) per Next.js 16.
 
