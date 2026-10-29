@@ -1,20 +1,10 @@
 /**
  * Session-refresh middleware.
  *
-<<<<<<< Updated upstream
- * Runs on every request, refreshes the Supabase session cookie if it's
- * expiring, and guards the routes listed in PROTECTED_PREFIXES. Imported
- * by the root `middleware.ts` (Edge-compatible; required on Netlify).
- */
-import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import type { Database } from '@/lib/types/database'
-import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
-=======
- * Runs on every matched request, refreshes the Supabase session cookie if
- * it's expiring, guards PROTECTED_PREFIXES, and enforces ROLE_RULES (role is
- * read from `public.profiles`, never from user-editable auth metadata).
- * Imported by the root `proxy.ts` (Next.js proxy convention).
+ * Runs on every matched request, refreshes the Supabase session cookie if it's
+ * expiring, guards PROTECTED_PREFIXES, and enforces ROLE_RULES (role is read
+ * from `public.profiles`, never from user-editable auth metadata). Imported by
+ * the root `middleware.ts` (Edge-compatible; required on Netlify).
  *
  * This is a navigation guard only — data access is enforced by RLS and by
  * the Route Handlers.
@@ -22,36 +12,15 @@ import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import type { Database, UserRole } from '@/lib/types/database'
-import { getSupabasePublishableKey, getSupabaseUrl } from '@/lib/supabase/env'
->>>>>>> Stashed changes
+import {
+  SUPABASE_ENV_MISSING_MESSAGE,
+  getSupabasePublishableKey,
+  getSupabaseUrl,
+} from '@/lib/supabase/env'
 
-const PROTECTED_PREFIXES = [
-  '/profile',
-  '/profile-setup',
-<<<<<<< Updated upstream
-=======
-  '/tests',
-  '/results',
-  '/domains',
->>>>>>> Stashed changes
-  '/teacher',
-  '/admin',
-  '/analytics',
-  '/reports',
-]
+/** `/dashboard`, `/tests`, `/results` stay reachable so dashboard links never bounce to `/`. */
+const PROTECTED_PREFIXES = ['/profile', '/profile-setup', '/teacher', '/admin', '/analytics', '/reports']
 
-<<<<<<< Updated upstream
-export async function updateSupabaseSession(request: NextRequest) {
-  let response = NextResponse.next({ request })
-
-  const url = getSupabaseUrl()
-  const key = getSupabaseAnonKey()
-  if (!url || !key) {
-    console.error(
-      '[supabase] Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY). See .env.example.',
-    )
-    return response
-=======
 const STAFF: UserRole[] = ['teacher', 'admin', 'super_admin']
 const ADMINS: UserRole[] = ['admin', 'super_admin']
 
@@ -73,17 +42,11 @@ function matchesPrefix(path: string, prefix: string) {
 export async function updateSupabaseSession(request: NextRequest) {
   let response = NextResponse.next({ request })
 
-  let url: string
-  let key: string
-  try {
-    url = getSupabaseUrl()
-    key = getSupabasePublishableKey()
-  } catch (e) {
-    console.error('[proxy]', e instanceof Error ? e.message : e)
-    return new NextResponse('Server misconfigured: Supabase environment variables are missing.', {
-      status: 500,
-    })
->>>>>>> Stashed changes
+  const url = getSupabaseUrl()
+  const key = getSupabasePublishableKey()
+  if (!url || !key) {
+    console.error(`[supabase] ${SUPABASE_ENV_MISSING_MESSAGE}`)
+    return response
   }
 
   const supabase = createServerClient<Database>(url, key, {
@@ -109,18 +72,6 @@ export async function updateSupabaseSession(request: NextRequest) {
   const userId = typeof claimsData?.claims?.sub === 'string' ? claimsData.claims.sub : null
 
   const path = request.nextUrl.pathname
-<<<<<<< Updated upstream
-  const needsAuth = PROTECTED_PREFIXES.some((p) => path.startsWith(p))
-
-  if (needsAuth && !user) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/'
-    redirectUrl.searchParams.set('redirect', path)
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  // `/` is the login gate — never redirect it. `/register` stays reachable.
-=======
 
   const redirectTo = (pathname: string, withReturnPath = false) => {
     const target = request.nextUrl.clone()
@@ -149,11 +100,6 @@ export async function updateSupabaseSession(request: NextRequest) {
     }
   }
 
-  // Already-authed users hitting register → bounce to dashboard (landing `/` stays usable).
-  if (path === '/register') {
-    return redirectTo('/dashboard')
-  }
->>>>>>> Stashed changes
-
+  // `/` is the login gate — never redirect it. `/register` stays reachable.
   return response
 }

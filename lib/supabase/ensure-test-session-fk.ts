@@ -10,13 +10,9 @@ import type { User } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { mockTests } from '@/lib/mock-data'
 import type { Database, UserRole } from '@/lib/types/database'
-<<<<<<< Updated upstream
 import { tryGetSupabaseAdmin } from '@/lib/supabase/server'
-=======
-import { getSupabaseAdmin, hasSupabaseSecretKey } from '@/lib/supabase/server'
 
 const TEST_ID_PATTERN = /^test-[a-z0-9-]{1,80}$/
->>>>>>> Stashed changes
 
 function testsDomainSlug(displayDomain: string): string {
   const d = displayDomain.toLowerCase()
@@ -33,15 +29,9 @@ export async function ensureTestSessionFkPrereqs(
   user: User,
   testId: string,
 ): Promise<EnsureFkResult> {
-<<<<<<< Updated upstream
   const admin = tryGetSupabaseAdmin()
-
   if (admin) {
-=======
-  if (hasSupabaseSecretKey()) {
->>>>>>> Stashed changes
     try {
-
       const { data: prof } = await admin.from('profiles').select('id').eq('id', user.id).maybeSingle()
       if (!prof) {
         const meta = user.user_metadata as { full_name?: string } | undefined
