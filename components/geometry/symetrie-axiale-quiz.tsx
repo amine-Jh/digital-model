@@ -14,6 +14,7 @@ import {
   SymetrieAxialeResult,
   SymetrieAxialeTrialResult,
   saveSymetrieAxialeResult,
+  isAxialeMulti,
 } from '@/lib/geometry/symetrie-axiale'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import { scoreGeometryQuestion } from '@/lib/geometry/scoring'
@@ -44,9 +45,7 @@ export function SymetrieAxialeQuiz() {
   const trialStart = useRef(0)
 
   const currentQuestion = SYMETRIE_AXIALE_QUESTIONS[current]
-  const isMulti =
-    Array.isArray(currentQuestion?.correctAnswer) &&
-    (currentQuestion.correctAnswer as number[]).length > 1
+  const isMulti = currentQuestion ? isAxialeMulti(currentQuestion) : false
 
   const toggleSelect = (idx: number) => {
     setSelectedList((prev) =>
@@ -186,7 +185,12 @@ export function SymetrieAxialeQuiz() {
           question_id: t.questionId,
           selected: t.selected,
           correct: t.correct,
-          score: t.pointsEarned != null ? Math.min(1, t.pointsEarned / 2) : t.score ?? 0,
+          score: (() => {
+            const qq = SYMETRIE_AXIALE_QUESTIONS[t.index]
+            const cap = qq?.points ?? 0
+            if (cap > 0 && t.pointsEarned != null) return Math.min(1, t.pointsEarned / cap)
+            return t.score ?? 0
+          })(),
           reaction_time_ms: t.reactionTimeMs,
         })),
         metadata: {
@@ -259,9 +263,8 @@ function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void })
           <CapacityLegend testId={SYMETRIE_AXIALE_TEST_ID} />
         </div>
         <div className="mb-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          <strong>Barème :</strong> Q2–Q15 → 1 pt chacune (C1 /14) · Q16–Q18 → 2 pts
-          chacune (C2 /6) · <strong>Total /20</strong>. Les auto-évaluations ne comptent pas
-          dans le score.
+          <strong>Barème :</strong> même règle que les autres leçons (fraction × points).
+          C1 = Q2–Q13 · C2 = Q14–Q17 (Q18 conservée). Auto-évaluations hors score.
         </div>
         <div className="mb-6 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
           <strong>Durée estimée :</strong> ~15 minutes. Répondez avec soin à chaque question.
@@ -287,14 +290,15 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
             <strong>1.</strong> Lisez attentivement chaque question. Certaines incluent des illustrations pour vous aider.
           </li>
           <li>
-            <strong>2.</strong> Sélectionnez la réponse que vous jugez correcte parmi les quatre options (A, B, C, ou D).
+            <strong>2.</strong> Certaines questions (Q2, Q3, Q4, Q11, Q17, Q18) admettent
+            plusieurs réponses — cochez toutes les bonnes options.
           </li>
           <li>
             <strong>3.</strong> Cliquez « Valider » pour passer à la question suivante.
           </li>
           <li>
-            <strong>4.</strong> Barème : questions Q2–Q15 → 1 point chacune (C1) ; Q16–Q18 → 2 points
-            chacune (C2). Total sur 20. Les auto-évaluations ne comptent pas.
+            <strong>4.</strong> Q7 et Q8 portent sur l&apos;axe (GH). Les auto-évaluations ne
+            comptent pas dans le score.
           </li>
           <li>
             <strong>5.</strong> À la fin : score sur 20, synthèse par parties et par compétences.
@@ -378,24 +382,10 @@ function TrialView({
       <Progress value={((index + 1) / total) * 100} className="mb-6" />
 
       <Card className="p-6">
-        <div className={hasMainImage ? 'grid grid-cols-2 gap-6 items-start' : ''}>
+        <div className={hasMainImage ? 'grid grid-cols-1 gap-6 items-start md:grid-cols-2' : ''}>
           {/* Main image if needed (Q9-Q15) */}
           {hasMainImage && (
-            <div className="flex items-center justify-center rounded-lg border border-gray-300 overflow-hidden bg-gray-100 dark:bg-gray-800">
-              <img
-                src={question.imagePath}
-                alt={`Question ${question.id}`}
-                className="w-full h-auto object-cover max-h-96"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.style.display = 'none'
-                  const parent = target.parentElement
-                  if (parent) {
-                    parent.innerHTML = `<div class="flex items-center justify-center p-8"><p class="text-sm text-gray-500">Image non disponible</p></div>`
-                  }
-                }}
-              />
-            </div>
+            <AxialeSharedFigure src={question.imagePath} questionId={question.id} />
           )}
 
           {/* Question and answers column */}
@@ -477,6 +467,88 @@ function TrialView({
         </div>
       </Card>
     </main>
+  )
+}
+
+function AxialeSharedFigure({
+  src,
+  questionId,
+}: {
+  src?: string
+  questionId: string
+}) {
+  const [failed, setFailed] = useState(false)
+  return (
+    <div className="rounded-lg border bg-white p-3">
+      {src && !failed && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={`Figure ${questionId} — axe (GH)`}
+          className="mx-auto h-auto w-full max-h-[min(70vh,520px)] object-contain"
+          onError={() => setFailed(true)}
+        />
+      )}
+      {(!src || failed) && <AxialeFigureGH />}
+    </div>
+  )
+}
+
+/** Figure de secours : axe (GH) explicite, A et C symétriques, G et H sur l’axe. */
+function AxialeFigureGH() {
+  const G = { x: 200, y: 28 }
+  const H = { x: 200, y: 272 }
+  const A = { x: 110, y: 100 }
+  const C = { x: 290, y: 100 }
+  const B = { x: 200, y: 175 }
+  const D = { x: 200, y: 70 }
+  const E = { x: 118, y: 220 }
+  const F = { x: 282, y: 220 }
+  const dot = (p: { x: number; y: number }, label: string, dx = 8, dy = -6) => (
+    <g key={label}>
+      <circle cx={p.x} cy={p.y} r={4} fill="#111" />
+      <text x={p.x + dx} y={p.y + dy} fontSize={13} fontWeight={700} fill="#111">
+        {label}
+      </text>
+    </g>
+  )
+  return (
+    <div>
+      <svg viewBox="0 0 400 300" className="mx-auto block w-full max-w-md">
+        <rect width="400" height="300" fill="#fafafa" />
+        <line
+          x1={G.x}
+          y1={20}
+          x2={H.x}
+          y2={280}
+          stroke="#dc2626"
+          strokeWidth={2.2}
+        />
+        <text x={208} y={28} fontSize={14} fontWeight={800} fill="#dc2626">
+          (GH)
+        </text>
+        <polygon
+          points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`}
+          fill="#e0f2fe"
+          stroke="#0f172a"
+          strokeWidth={1.4}
+        />
+        <line x1={E.x} y1={E.y} x2={F.x} y2={F.y} stroke="#64748b" />
+        <line x1={A.x} y1={A.y} x2={C.x} y2={C.y} stroke="#94a3b8" strokeDasharray="4 3" />
+        {dot(G, 'G', 10, 4)}
+        {dot(H, 'H', 10, 4)}
+        {dot(A, 'A', -16, -4)}
+        {dot(C, 'C', 8, -4)}
+        {dot(B, 'B', 10, 4)}
+        {dot(D, 'D', 10, -4)}
+        {dot(E, 'E', -16, 12)}
+        {dot(F, 'F', 8, 12)}
+      </svg>
+      <p className="mt-2 text-center text-xs text-muted-foreground">
+        Axe <strong>(GH)</strong> — points G et H sur l&apos;axe. Figure de
+        secours si l&apos;image originale est absente.
+      </p>
+    </div>
   )
 }
 

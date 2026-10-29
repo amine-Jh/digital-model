@@ -1,15 +1,19 @@
 /**
  * GET /api/schools — active establishments (no auth).
  * Used by registration (teacher) and student profile setup.
+ *
+ * `supabase/setup.sql` gives anonymous users no table access, so the secret
+ * key is used when configured; the publishable key is a fallback for
+ * databases that still allow public reads of `schools`.
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabasePublic, tryGetSupabaseAdmin } from '@/lib/supabase/server'
 import type { PublicSchool } from '@/lib/school-directory'
 
 export async function GET() {
   try {
-    const admin = getSupabaseAdmin()
-    const { data, error } = await admin
+    const sb = tryGetSupabaseAdmin() ?? getSupabasePublic()
+    const { data, error } = await sb
       .from('schools')
       .select('id, name, city')
       .eq('is_active', true)

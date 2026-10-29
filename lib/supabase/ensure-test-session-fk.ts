@@ -10,7 +10,7 @@ import type { User } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { mockTests } from '@/lib/mock-data'
 import type { Database, UserRole } from '@/lib/types/database'
-import { getSupabaseAdmin, hasSupabaseSecretKey } from '@/lib/supabase/server'
+import { tryGetSupabaseAdmin } from '@/lib/supabase/server'
 
 const TEST_ID_PATTERN = /^test-[a-z0-9-]{1,80}$/
 
@@ -29,10 +29,9 @@ export async function ensureTestSessionFkPrereqs(
   user: User,
   testId: string,
 ): Promise<EnsureFkResult> {
-  if (hasSupabaseSecretKey()) {
+  const admin = tryGetSupabaseAdmin()
+  if (admin) {
     try {
-      const admin = getSupabaseAdmin()
-
       const { data: prof } = await admin.from('profiles').select('id').eq('id', user.id).maybeSingle()
       if (!prof) {
         const meta = user.user_metadata as { full_name?: string } | undefined

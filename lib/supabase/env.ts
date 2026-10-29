@@ -1,5 +1,5 @@
 /**
- * Supabase environment resolution (shared by browser, proxy and server code).
+ * Supabase environment resolution (shared by browser, middleware and server code).
  *
  * Preferred variables (new Supabase API keys):
  *   NEXT_PUBLIC_SUPABASE_URL              — project URL (browser + server)
@@ -8,33 +8,29 @@
  *
  * Legacy fallbacks: NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL.
  *
- * `NEXT_PUBLIC_*` must be read with literal `process.env.NEXT_PUBLIC_…` access so
- * Next.js can inline them into the client bundle at build time.
+ * Getters return '' when unset so callers can fail with a clear message instead
+ * of crashing. `NEXT_PUBLIC_*` must be read with literal `process.env.NEXT_PUBLIC_…`
+ * access so Next.js can inline them into the client bundle at build time.
  */
 
+export const SUPABASE_ENV_MISSING_MESSAGE =
+  'Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Set them in .env.local (dev) or in the host build environment (Netlify), then redeploy.'
+
 export function getSupabaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-  if (!url) {
-    throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL. Set it in .env.local (dev) or in your host’s build environment, then rebuild.',
-    )
-  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || process.env.SUPABASE_URL?.trim() || ''
   // The clients append /rest/v1, /auth/v1… themselves; a pasted REST endpoint would double it (PGRST125).
-  return url.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '')
+  return url.replace(/\/+$/, '').replace(/\/rest\/v1$/, '')
 }
 
 export function getSupabasePublishableKey(): string {
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!key) {
-    throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Set it in .env.local (dev) or in your host’s build environment, then rebuild.',
-    )
-  }
-  return key
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    ''
+  )
 }
 
-/** Server-only. Returns null when no privileged key is configured. */
-export function getSupabaseSecretKey(): string | null {
-  return process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || null
+/** Server-only privileged key (new `sb_secret_…` or legacy service_role JWT). */
+export function getSupabaseSecretKey(): string {
+  return process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || ''
 }

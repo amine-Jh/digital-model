@@ -4,7 +4,7 @@
  * POST body: { email, password, fullName?, schoolId: uuid }
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseServer, getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabaseServer, tryGetSupabaseAdmin } from '@/lib/supabase/server'
 import { requireSuperAdmin } from '@/lib/api/require-super-admin'
 
 export async function GET() {
@@ -12,8 +12,8 @@ export async function GET() {
   if ('response' in gate) return gate.response
 
   try {
-    const admin = getSupabaseAdmin()
-    const { data: teachers, error: tErr } = await admin
+    const sb = await getSupabaseServer()
+    const { data: teachers, error: tErr } = await sb
       .from('profiles')
       .select('id, email, full_name, school_id, created_at')
       .eq('role', 'teacher')
@@ -26,7 +26,7 @@ export async function GET() {
     const schoolIds = [...new Set((teachers ?? []).map((t) => t.school_id).filter(Boolean))] as string[]
     const schoolMap = new Map<string, { name: string; city: string | null }>()
     if (schoolIds.length > 0) {
-      const { data: schools } = await admin.from('schools').select('id, name, city').in('id', schoolIds)
+      const { data: schools } = await sb.from('schools').select('id, name, city').in('id', schoolIds)
       for (const s of schools ?? []) {
         schoolMap.set(s.id, { name: s.name, city: s.city })
       }
@@ -77,7 +77,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Établissement invalide ou inactif.' }, { status: 400 })
     }
 
-    const svc = getSupabaseAdmin()
+    const svc = tryGetSupabaseAdmin()
+    if (!svc) {
+      return NextResponse.json(
+        {
+          error:
+            'Creating teachers requires SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) on the server.',
+        },
+        { status: 503 },
+      )
+    }
     const { data, error } = await svc.auth.admin.createUser({
       email,
       password,

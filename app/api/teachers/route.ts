@@ -1,11 +1,11 @@
 /**
  * GET /api/teachers?schoolId=uuid
  *
- * Teachers in the directory (service role after auth) — avoids RLS gaps.
+ * Teachers in the directory (signed-in user + RLS `profiles_teacher_directory`).
  * When `schoolId` is set, only teachers assigned to that school are returned.
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseServer, getSupabaseAdmin } from '@/lib/supabase/server'
+import { getSupabaseServer } from '@/lib/supabase/server'
 import type { TeacherDirectoryEntry } from '@/lib/teacher-directory'
 
 export async function GET(request: Request) {
@@ -21,8 +21,7 @@ export async function GET(request: Request) {
   const schoolId = searchParams.get('schoolId')?.trim() || null
 
   try {
-    const admin = getSupabaseAdmin()
-    let q = admin.from('profiles').select('id, email, full_name, school_id').eq('role', 'teacher')
+    let q = sb.from('profiles').select('id, email, full_name, school_id').eq('role', 'teacher')
     if (schoolId) {
       q = q.eq('school_id', schoolId)
     }

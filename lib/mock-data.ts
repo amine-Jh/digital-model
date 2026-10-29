@@ -370,6 +370,14 @@ export const mockTests: Test[] = [
     type: 'mcq',
     duration: 1500,
   },
+  {
+    id: 'test-geo-space-volumes',
+    title: 'Géométrie dans l\'espace : volumes',
+    domain: 'Cognition et apprentissage de la géométrie',
+    status: 'upcoming',
+    type: 'mcq',
+    duration: 900,
+  },
 ]
 
 export const mockStudentResults: StudentResult[] = [

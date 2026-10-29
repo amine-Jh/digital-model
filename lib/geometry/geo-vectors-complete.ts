@@ -4,13 +4,28 @@
  * Parties : cours (Q1–Q7) + auto-évaluation · construction (Q8–Q18) +
  * auto-évaluation démonstration · raisonnement (Q19–Q21).
  * Capacités C1–C5 : voir `CAPACITIES_BY_TEST['test-geo-vectors-complete']`.
- * Les auto-évaluations et questions ouvertes (placement, coefficients) ne sont
- * pas comptées dans le score automatique (voir exclusions).
+ * Seules AutoEval-1 et AutoEval-3 sont hors barème. Q9–Q11 (placements) et
+ * Q18 (coefficients) sont auto-notées et agrégées à C1 et au score global.
  *
  */
 
 export const VECTORS_TEST_ID = 'test-geo-vectors-complete'
 export const VECTORS_RESULTS_KEY = 'geo-vectors:results'
+
+/** Lattice target for a named point. `verified: false` → saisie conservée, hors barème. */
+export type VectorsPlacementExpected = {
+  name: string
+  x: number
+  y: number
+  verified?: boolean
+}
+
+export type VectorsFillField = {
+  label: string
+  expected?: string
+  /** false → champ affiché / enregistré, non noté (corrigé manuscrit illisible ou contradictoire). */
+  verified?: boolean
+}
 
 export interface VectorsQuestion {
   id: string
@@ -22,14 +37,17 @@ export interface VectorsQuestion {
   imagePath?: string
   /** When true, the interactive coordinate plane is rendered (LEFT panel). */
   showCoordPlane?: boolean
-  /** When true, students can click on the figure to place named points; the
-   *  selection is recorded but not auto-graded (kept for review). */
+  /** Students click the plane to place named points; scored via placementExpected. */
   pointPlacement?: { count: number; labels: string[] }
-  /** When set with pointPlacement, auto-grade clicks against these lattice coords. */
-  placementExpected?: { name: string; x: number; y: number }[]
-  /** When set, the question collects numeric collinearity coefficients
-   *  using inline inputs (not auto-graded). */
-  fillIn?: { fields: { label: string; expected?: string }[] }
+  /**
+   * Q10 / Q11: one point at a time, immediate green/red, then auto-advance.
+   * Expected coords live on the server (`vectors-placement-keys.ts`).
+   */
+  sequentialPlacement?: boolean
+  /** Lattice coords used to auto-grade pointPlacement (partial credit = k / N). */
+  placementExpected?: VectorsPlacementExpected[]
+  /** Numeric collinearity coefficients (inline inputs), scored when fillGraded. */
+  fillIn?: { fields: VectorsFillField[] }
   /** When true with fillIn, auto-grade numeric answers (order-sensitive). */
   fillGraded?: boolean
   part: 'autoeval' | 'course' | 'autoeval2' | 'construction' | 'autoeval3' | 'reasoning'
@@ -119,10 +137,10 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       '\\( -\\vec{AG} \\)',
       'Aucune réponse'
     ],
-    correctAnswer: 1,
+    correctAnswer: 3,
     requiresImage: false,
     part: 'course',
-    correction: 'Réponse correcte: B'
+    correction: 'Réponse correcte: D uniquement'
   },
   {
     id: 'Q3',
@@ -134,10 +152,10 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       '\\( \\vec{AB} - 2\\vec{IB} = \\vec{0} \\)',
       'J\'ai oublié'
     ],
-    correctAnswer: [0, 2],
+    correctAnswer: [1, 2],
     requiresImage: false,
     part: 'course',
-    correction: 'Réponses correctes: A, C'
+    correction: 'Réponses correctes: B, C'
   },
   {
     id: 'Q4',
@@ -213,11 +231,11 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       '\\( \\vec{DE} \\) et \\( \\vec{F\'F} \\) sont opposés',
       '\\( \\vec{DE} = \\vec{FF\'} \\)',
     ],
-    correctAnswer: [2, 3, 4],
+    correctAnswer: [1, 3, 4],
     requiresImage: true,
     imagePath: '/images/geometry/vectors/vecteurs.png',
     part: 'construction',
-    correction: 'Réponses correctes : C, D, E',
+    correction: 'Réponses correctes : B, D, E',
   },
   {
     id: 'Q9',
@@ -230,57 +248,51 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     imagePath: '/images/geometry/vectors/vecteurs.png',
     showCoordPlane: true,
     pointPlacement: { count: 1, labels: ['I'] },
-    placementExpected: [{ name: 'I', x: 1, y: 1 }],
+    placementExpected: [{ name: 'I', x: 2, y: 1 }],
     part: 'construction',
-    correction: 'Réponse attendue : \\( I(1\\,;\\,1) \\)',
+    correction: 'Réponse attendue : \\( I(2\\,;\\,1) \\)',
   },
   {
     id: 'Q10',
     competencies: ['C1'],
     question:
-      'Placer les points \\( M \\) et \\( Q \\) tels que : \\( \\vec{AM} = \\vec{AB} + \\vec{AD} \\) et \\( \\vec{BQ} = \\vec{BG} + \\vec{BC\'} \\)',
+      'Placer les points \\( Q \\) puis \\( M \\) tels que : \\( \\vec{BQ} = \\vec{BG} + \\vec{BC\'} \\) et \\( \\vec{AM} = \\vec{AB} + \\vec{AD} \\)',
     options: [],
     correctAnswer: null,
     requiresImage: true,
     imagePath: '/images/geometry/vectors/vecteurs.png',
     showCoordPlane: true,
-    pointPlacement: { count: 2, labels: ['M', 'Q'] },
-    placementExpected: [
-      { name: 'M', x: 11, y: 7 },
-      { name: 'Q', x: 7, y: -3 },
-    ],
+    sequentialPlacement: true,
+    pointPlacement: { count: 2, labels: ['Q', 'M'] },
     part: 'construction',
-    correction: 'Réponses attendues : \\( M(11\\,;\\,7) \\), \\( Q(7\\,;\\,-3) \\)',
+    correction: 'Placement séquentiel de Q puis M (clés côté serveur).',
   },
   {
     id: 'Q11',
     competencies: ['C1'],
     question:
-      'Placer les points \\( N \\) et \\( P \\) tels que : \\( \\vec{AN} = \\vec{BH} \\) et \\( \\vec{DE} = -\\vec{C\'P} \\)',
+      'Placer les points \\( P \\) puis \\( N \\) tels que : \\( \\vec{DE} = -\\vec{C\'P} \\) et \\( \\vec{AN} = \\vec{BH} \\)',
     options: [],
     correctAnswer: null,
     requiresImage: true,
     imagePath: '/images/geometry/vectors/vecteurs.png',
     showCoordPlane: true,
-    pointPlacement: { count: 2, labels: ['N', 'P'] },
-    placementExpected: [
-      { name: 'N', x: 3, y: -3 },
-      { name: 'P', x: 10, y: 6 },
-    ],
+    sequentialPlacement: true,
+    pointPlacement: { count: 2, labels: ['P', 'N'] },
     part: 'construction',
-    correction: 'Réponses attendues : \\( N(3\\,;\\,-3) \\), \\( P(10\\,;\\,6) \\)',
+    correction: 'Placement séquentiel de P puis N (clés côté serveur).',
   },
   {
     id: 'Q12',
     competencies: ['C1'],
     question: 'Donner les parallélogrammes présents dans la figure :',
     options: ['ABDC', 'DEFF\'', 'BC\'GH', 'ABHG'],
-    correctAnswer: [0],
+    correctAnswer: 1,
     requiresImage: true,
     // Q12 reads the same coordinate system (O, I, J) as Q9-Q11.
     showCoordPlane: true,
     part: 'construction',
-    correction: 'Réponse correcte : A',
+    correction: 'Réponse correcte : B (DEFF\')',
   },
   {
     id: 'Q13',
@@ -324,11 +336,11 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
       '\\( \\vec{AN} + \\vec{GN} = \\vec{0} \\)',
       '\\( \\vec{AN} = \\vec{NG} \\)',
     ],
-    correctAnswer: 1,
+    correctAnswer: [1, 2],
     requiresImage: true,
     imagePath: '/images/geometry/vectors/vecteurs.png',
     part: 'construction',
-    correction: 'Réponse correcte : B',
+    correction: 'Réponses correctes : B et C',
   },
   {
     id: 'Q16',
@@ -365,14 +377,15 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     imagePath: '/images/geometry/vectors/sens-des-vecteurs.png',
     fillIn: {
       fields: [
-        { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MP} \\)', expected: '-3' },
+        { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MP} \\)', expected: '-1/3' },
         { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MN} \\)', expected: '3/4' },
-        { label: '\\( \\vec{MR} = \\;\\square\\; \\vec{MS} \\)', expected: '3/5' },
+        { label: '\\( \\vec{MS} = \\;\\square\\; \\vec{RN} \\)', expected: '5' },
       ],
     },
     fillGraded: true,
     part: 'construction',
-    correction: 'Réponses attendues (dans l\'ordre) : \\(-3\\), \\(\\tfrac{3}{4}\\), \\(\\tfrac{3}{5}\\)',
+    correction:
+      'Noté : \\(\\vec{MR}=-\\tfrac{1}{3}\\vec{MP}\\), \\(\\vec{MR}=\\tfrac{3}{4}\\vec{MN}\\), \\(\\vec{MS}=5\\vec{RN}\\).',
   },
   {
     id: 'AutoEval-3',
@@ -434,6 +447,97 @@ export const VECTORS_QUESTIONS: VectorsQuestion[] = [
     correction: 'Réponses correctes : B, C',
   },
 ]
+
+export function isVectorsAutoEvalQuestion(q: VectorsQuestion): boolean {
+  return (
+    q.id.startsWith('AutoEval') ||
+    q.part === 'autoeval' ||
+    q.part === 'autoeval2' ||
+    q.part === 'autoeval3'
+  )
+}
+
+export function gradedPlacementExpected(q: VectorsQuestion): VectorsPlacementExpected[] {
+  return (q.placementExpected ?? []).filter((p) => p.verified !== false)
+}
+
+export function hasGradedFillIn(q: VectorsQuestion): boolean {
+  if (q.fillGraded !== true || !q.fillIn) return false
+  return q.fillIn.fields.some((f) => f.verified !== false && Boolean(f.expected?.trim()))
+}
+
+export function isVectorsScorableQuestion(q: VectorsQuestion): boolean {
+  if (isVectorsAutoEvalQuestion(q)) return false
+  const gradedManual =
+    q.sequentialPlacement === true ||
+    gradedPlacementExpected(q).length > 0 ||
+    hasGradedFillIn(q)
+  if (q.correctAnswer === null && !gradedManual) return false
+  return true
+}
+
+export function parseVectorsPlacements(freeText: string): { name: string; x: number; y: number }[] {
+  const out: { name: string; x: number; y: number }[] = []
+  const re = /(\w+)\((-?\d+)\s*;\s*(-?\d+)\)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(freeText)) != null) {
+    out.push({ name: m[1], x: Number(m[2]), y: Number(m[3]) })
+  }
+  return out
+}
+
+export function scoreVectorsPlacements(
+  freeText: string,
+  expected: VectorsPlacementExpected[],
+): number {
+  const graded = expected.filter((e) => e.verified !== false)
+  if (graded.length === 0) return 0
+  const got = parseVectorsPlacements(freeText)
+  let ok = 0
+  for (const e of graded) {
+    const g = got.find((p) => p.name === e.name)
+    if (g && g.x === e.x && g.y === e.y) ok++
+  }
+  return ok / graded.length
+}
+
+function normNumericInput(s: string): number | null {
+  const t = s.trim().replace(',', '.').replace(/\s+/g, '')
+  if (!t) return null
+  if (t.includes('/')) {
+    const [a, b] = t.split('/')
+    const na = Number(a)
+    const nb = Number(b)
+    if (!Number.isFinite(na) || !Number.isFinite(nb) || nb === 0) return null
+    return na / nb
+  }
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
+
+export function scoreVectorsFillIn(freeText: string, fields: VectorsFillField[]): number {
+  const parts = freeText.split(' ; ').map((x) => x.trim())
+  let ok = 0
+  let n = 0
+  for (let i = 0; i < fields.length; i++) {
+    const f = fields[i]
+    if (f.verified === false || !f.expected?.trim()) continue
+    n++
+    const a = normNumericInput(parts[i] ?? '')
+    const b = normNumericInput(f.expected)
+    if (a == null || b == null) continue
+    if (Math.abs(a - b) < 1e-9) ok++
+  }
+  return n === 0 ? 0 : ok / n
+}
+
+/** Q11 N(3;−3) est la clé validée (figure). MR = k MS a été retiré de Q18. */
+export const VECTORS_CORRECTION_REVIEW: {
+  questionId: string
+  status: 'needs-review'
+  manuscript: string
+  figureCheck: string
+}[] = []
 
 export function listVectorsResults(): VectorsResult[] {
   if (typeof window === 'undefined') return []

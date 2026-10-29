@@ -4,33 +4,57 @@ import { VECTOR_POINTS } from '@/lib/geometry/geo-vectors-complete'
 
 /**
  * Coordinate plane that mirrors the canonical vecteurs.png figure but lets
- * the student click to place named points (Q9 / Q10 / Q11). Coordinates of
- * the labelled points are NOT displayed (per spec) — only the letters.
+ * the student click to place named points (Q9 batch / Q10–Q11 sequential).
+ * Lattice coordinates of the labelled figure points are not displayed.
  */
+
+export type VectorsPlaneMark = {
+  name: string
+  x: number
+  y: number
+  correct?: boolean | null
+}
 
 interface ClickableVectorsPlaneProps {
   labels: string[]
+  mode?: 'batch' | 'sequential' | 'readonly'
+  /** Sequential: name of the point currently requested. */
+  activeLabel?: string | null
+  /** Sequential: already checked marks (locked). */
+  marks?: VectorsPlaneMark[]
+  locked?: boolean
+  /** Override figure letters (default: VECTOR_POINTS). Pass [] to hide them. */
+  figurePoints?: { name: string; x: number; y: number }[]
   onChange?: (placed: { name: string; x: number; y: number }[]) => void
+  onPlace?: (placed: { name: string; x: number; y: number }) => void
 }
 
 export function ClickableVectorsPlane({
   labels,
+  mode = 'batch',
+  activeLabel = null,
+  marks,
+  locked = false,
+  figurePoints,
   onChange,
+  onPlace,
 }: ClickableVectorsPlaneProps) {
+  const labeledFigure = figurePoints ?? VECTOR_POINTS
   const svgRef = useRef<SVGSVGElement>(null)
   const [placed, setPlaced] = useState<{ name: string; x: number; y: number }[]>([])
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null)
 
-  // Wider window than the reference figure so students can place points
-  // like I(6,8), M(11,7), P(10,6) without running off the canvas.
+  const sequential = mode === 'sequential'
+  const readonly = mode === 'readonly' || labels.length === 0
+
   const xMin = -4
   const xMax = 12
   const yMin = -6
   const yMax = 10
-  const padX = 28
-  const padY = 24
-  const w = 520
-  const h = 360
+  const padX = 36
+  const padY = 32
+  const w = 640
+  const h = 480
   const innerW = w - 2 * padX
   const innerH = h - 2 * padY
   const sx = (x: number) => padX + ((x - xMin) / (xMax - xMin)) * innerW
@@ -43,7 +67,7 @@ export function ClickableVectorsPlane({
   const ys: number[] = []
   for (let y = yMin; y <= yMax; y++) ys.push(y)
 
-  const cursorFromEvent = (e: React.MouseEvent<SVGSVGElement>) => {
+  const latticeFromEvent = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!svgRef.current) return null
     const rect = svgRef.current.getBoundingClientRect()
     const px = ((e.clientX - rect.left) / rect.width) * w
@@ -54,10 +78,16 @@ export function ClickableVectorsPlane({
     return { x, y }
   }
 
-  const handleClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (labels.length === 0) return
-    const pt = cursorFromEvent(e)
+  const handlePlace = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (readonly || locked) return
+    const pt = latticeFromEvent(e)
     if (!pt) return
+
+    if (sequential) {
+      if (!activeLabel) return
+      onPlace?.({ name: activeLabel, x: pt.x, y: pt.y })
+      return
+    }
 
     setPlaced((prev) => {
       const i = prev.length
@@ -72,42 +102,71 @@ export function ClickableVectorsPlane({
     })
   }
 
-  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    setHover(cursorFromEvent(e))
+  const handleMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (readonly || locked) {
+      setHover(null)
+      return
+    }
+    setHover(latticeFromEvent(e))
   }
 
-  const handleLeave = () => setHover(null)
-
-  // Label of the point that *would* be placed on the next click — shown as a
-  // ghost cursor so the student sees which point they are about to drop.
-  const nextLabel: string | null =
-    placed.length >= labels.length ? labels[0] ?? null : labels[placed.length] ?? null
+  const displayMarks: VectorsPlaneMark[] = sequential ? (marks ?? []) : placed
+  const nextLabel = sequential
+    ? locked
+      ? null
+      : activeLabel
+    : placed.length >= labels.length
+      ? labels[0] ?? null
+      : labels[placed.length] ?? null
 
   const reset = () => {
+    if (sequential) return
     setPlaced([])
     onChange?.([])
   }
 
+  const markFill = (m: VectorsPlaneMark) => {
+    if (m.correct === true) return '#16a34a'
+    if (m.correct === false) return '#dc2626'
+    return '#dc2626'
+  }
+
   return (
     <div>
-      <p className="mb-2 text-xs text-muted-foreground">
-        Cliquez sur le repère pour placer{' '}
-        {labels.map((l, i) => (
-          <span key={l}>
-            {i > 0 ? ', ' : ''}
-            <strong>{l}</strong>
-          </span>
-        ))}
-        {' '}(plus de clics réinitialisent automatiquement).
+      <p className="mb-2 text-sm text-muted-foreground">
+        {sequential ? (
+          <>
+            Cliquez sur le nœud du repère pour placer{' '}
+            <strong>{activeLabel ?? 'le point'}</strong>.
+          </>
+        ) : readonly ? (
+          'Repère de référence.'
+        ) : (
+          <>
+            Cliquez sur le repère pour placer{' '}
+            {labels.map((l, i) => (
+              <span key={l}>
+                {i > 0 ? ', ' : ''}
+                <strong>{l}</strong>
+              </span>
+            ))}
+            {' '}(plus de clics réinitialisent automatiquement).
+          </>
+        )}
       </p>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${w} ${h}`}
-        className="block w-full cursor-crosshair bg-white"
+        className={`block w-full touch-none bg-white ${
+          readonly || locked ? 'cursor-default' : 'cursor-crosshair'
+        }`}
         role="img"
-        onClick={handleClick}
-        onMouseMove={handleMove}
-        onMouseLeave={handleLeave}
+        onPointerDown={(e) => {
+          if (e.pointerType === 'mouse' && e.button !== 0) return
+          handlePlace(e)
+        }}
+        onPointerMove={handleMove}
+        onPointerLeave={() => setHover(null)}
       >
         <rect width={w} height={h} fill="#fafafa" />
 
@@ -118,8 +177,8 @@ export function ClickableVectorsPlane({
             y1={padY}
             x2={sx(x)}
             y2={h - padY}
-            stroke={x === 0 ? '#94a3b8' : '#e5e7eb'}
-            strokeWidth={x === 0 ? 1.4 : 0.6}
+            stroke={x === 0 ? '#64748b' : '#e5e7eb'}
+            strokeWidth={x === 0 ? 1.6 : 0.7}
           />
         ))}
         {ys.map((y) => (
@@ -129,115 +188,124 @@ export function ClickableVectorsPlane({
             y1={sy(y)}
             x2={w - padX}
             y2={sy(y)}
-            stroke={y === 0 ? '#94a3b8' : '#e5e7eb'}
-            strokeWidth={y === 0 ? 1.4 : 0.6}
+            stroke={y === 0 ? '#64748b' : '#e5e7eb'}
+            strokeWidth={y === 0 ? 1.6 : 0.7}
           />
         ))}
 
-        {xs.filter((x) => x % 2 === 0).map((x) => (
+        {xs.map((x) => (
           <text
             key={`xl-${x}`}
             x={sx(x)}
-            y={sy(0) + 12}
-            fontSize={10}
+            y={sy(0) + 14}
+            fontSize={11}
             textAnchor="middle"
-            fill="#64748b"
+            fill="#475569"
           >
             {x}
           </text>
         ))}
-        {ys.filter((y) => y % 2 === 0 && y !== 0).map((y) => (
+        {ys.filter((y) => y !== 0).map((y) => (
           <text
             key={`yl-${y}`}
-            x={sx(0) - 6}
-            y={sy(y) + 3}
-            fontSize={10}
+            x={sx(0) - 7}
+            y={sy(y) + 4}
+            fontSize={11}
             textAnchor="end"
-            fill="#64748b"
+            fill="#475569"
           >
             {y}
           </text>
         ))}
-        <text x={w - padX + 4} y={sy(0) + 4} fontSize={11} fill="#475569">x</text>
-        <text x={sx(0) + 4} y={padY - 4} fontSize={11} fill="#475569">y</text>
+        <text x={w - padX + 6} y={sy(0) + 4} fontSize={13} fill="#334155">
+          x
+        </text>
+        <text x={sx(0) + 6} y={padY - 8} fontSize={13} fill="#334155">
+          y
+        </text>
 
-        {/* Reference points — labels only, NO coordinates */}
-        {VECTOR_POINTS.map((pt) => {
+        {labeledFigure.map((pt) => {
           const cx = sx(pt.x)
           const cy = sy(pt.y)
           return (
             <g key={pt.name}>
               <circle cx={cx} cy={cy} r={3.5} fill="#475569" stroke="white" strokeWidth={1} />
-              <text
-                x={cx + 6}
-                y={cy - 6}
-                fontSize={11}
-                fontWeight={700}
-                fill="#1e293b"
-              >
+              <text x={cx + 6} y={cy - 6} fontSize={12} fontWeight={700} fill="#1e293b">
                 {pt.name}
               </text>
             </g>
           )
         })}
 
-        {/* Hover ghost — preview of the point that would be placed next */}
         {hover && nextLabel && (
           <g pointerEvents="none">
             <circle
               cx={sx(hover.x)}
               cy={sy(hover.y)}
-              r={5}
-              fill="#dc2626"
-              fillOpacity={0.35}
-              stroke="#dc2626"
+              r={6}
+              fill="#2563eb"
+              fillOpacity={0.3}
+              stroke="#2563eb"
               strokeWidth={1.2}
             />
             <text
-              x={sx(hover.x) + 7}
-              y={sy(hover.y) - 7}
-              fontSize={12}
+              x={sx(hover.x) + 8}
+              y={sy(hover.y) - 8}
+              fontSize={13}
               fontWeight={700}
-              fill="#dc2626"
-              fillOpacity={0.7}
+              fill="#1d4ed8"
             >
               {nextLabel}
             </text>
-            <text
-              x={sx(hover.x) + 7}
-              y={sy(hover.y) + 12}
-              fontSize={10}
-              fill="#475569"
-              fillOpacity={0.7}
-            >
+            <text x={sx(hover.x) + 8} y={sy(hover.y) + 14} fontSize={11} fill="#475569">
               ({hover.x};{hover.y})
             </text>
           </g>
         )}
 
-        {/* Placed points (red) */}
-        {placed.map((p, i) => (
+        {displayMarks.map((p, i) => (
           <g key={`${p.name}-${i}`}>
-            <circle cx={sx(p.x)} cy={sy(p.y)} r={5} fill="#dc2626" stroke="white" strokeWidth={1.5} />
-            <text x={sx(p.x) + 6} y={sy(p.y) - 6} fontSize={12} fontWeight={700} fill="#dc2626">
+            <circle
+              cx={sx(p.x)}
+              cy={sy(p.y)}
+              r={7}
+              fill={markFill(p)}
+              stroke="white"
+              strokeWidth={1.8}
+            />
+            <text
+              x={sx(p.x) + 8}
+              y={sy(p.y) - 8}
+              fontSize={14}
+              fontWeight={700}
+              fill={markFill(p)}
+            >
               {p.name}
             </text>
           </g>
         ))}
       </svg>
-      <div className="mt-2 flex items-center justify-between">
+      <div className="mt-2 flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
-          {placed.length === 0
+          {displayMarks.length === 0
             ? 'Aucun point placé.'
-            : placed.map((p) => `${p.name}(${p.x};${p.y})`).join(' · ')}
+            : displayMarks
+                .map((p) => {
+                  const flag =
+                    p.correct === true ? ' ✓' : p.correct === false ? ' ✗' : ''
+                  return `${p.name}(${p.x};${p.y})${flag}`
+                })
+                .join(' · ')}
         </span>
-        <button
-          type="button"
-          onClick={reset}
-          className="rounded border px-2 py-1 text-xs hover:bg-muted/50"
-        >
-          Réinitialiser
-        </button>
+        {!sequential && !readonly && (
+          <button
+            type="button"
+            onClick={reset}
+            className="rounded border px-2 py-1 text-xs hover:bg-muted/50"
+          >
+            Réinitialiser
+          </button>
+        )}
       </div>
     </div>
   )

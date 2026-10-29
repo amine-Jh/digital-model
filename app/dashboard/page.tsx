@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { MobileNav } from '@/components/mobile-nav'
@@ -66,7 +65,6 @@ function CustomBarTooltip({
 }
 
 export default function StudentDashboard() {
-  const router = useRouter()
   const { user, loading } = useAuth()
   const { catalog, fromDatabase } = useTestsCatalog()
   const [sessions, setSessions] = useState<SessionRow[]>([])
@@ -79,10 +77,6 @@ export default function StudentDashboard() {
     () => mergeCatalogWithSessions(catalog, sessions),
     [catalog, sessions],
   )
-
-  useEffect(() => {
-    if (!loading && !user) router.replace('/')
-  }, [loading, user, router])
 
   useEffect(() => {
     if (!user) {
@@ -198,18 +192,7 @@ export default function StudentDashboard() {
     )
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-6">
-        <p className="text-center text-sm text-muted-foreground max-w-sm">
-          Your session could not be loaded. Sign in again to continue.
-        </p>
-        <Button asChild>
-          <Link href="/">Back to sign in</Link>
-        </Button>
-      </div>
-    )
-  }
+  const viewRole = user?.role ?? 'student'
 
   const completedCount = mergedTests.filter((t) => t.status === 'completed').length
   const inProgressCount = mergedTests.filter((t) => t.status === 'in-progress').length
@@ -239,9 +222,9 @@ export default function StudentDashboard() {
 
   return (
     <div className="bg-background min-h-screen">
-      <Sidebar userRole={user.role} />
-      {(user.role === 'student' || user.role === 'super_admin') && (
-        <MobileNav userRole={user.role} />
+      <Sidebar userRole={viewRole} />
+      {(viewRole === 'student' || viewRole === 'super_admin') && (
+        <MobileNav userRole={viewRole} />
       )}
 
       <div className={cn('transition-all duration-200', isMobile ? 'ml-0' : 'ml-64')}>

@@ -90,4 +90,4 @@ Les batteries inspirées d'outils standardisés (TVPS, Raven, Beery, etc.) sont 
 - Code source : racine du dépôt `digital-model`
 - Architecture détaillée : [`docs/PROJECT-OVERVIEW.md`](../PROJECT-OVERVIEW.md)
 - Migrations base : [`supabase/migrations/`](../../supabase/migrations/)
-- Catalogue des tests : [`lib/mock-data.ts`](../../lib/mock-data.ts), [`supabase/seed.sql`](../../supabase/seed.sql)
+- Catalogue des tests : [`lib/mock-data.ts`](../../lib/mock-data.ts), [`supabase/setup.sql`](../../supabase/setup.sql)

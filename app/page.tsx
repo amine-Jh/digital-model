@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth-context'
 import { isAdminAreaRole } from '@/lib/auth-types'
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { HeroAnimatedBackdrop } from '@/components/landing/hero-animated-backdrop'
-import { Brain, Lock, Loader2, Sparkles, User, ArrowRight } from 'lucide-react'
+import { Brain, Lock, Loader2, Sparkles, Mail, ArrowRight } from 'lucide-react'
 
 export default function LandingPage() {
   const { t } = useTranslation()
@@ -19,45 +19,46 @@ export default function LandingPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const router = useRouter()
-  const { login, user, loading: authLoading } = useAuth()
+  const { login } = useAuth()
   const accessRef = useRef<HTMLDivElement>(null)
 
   const goToSignIn = useCallback(() => {
     accessRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     window.setTimeout(() => {
-      document.getElementById('landing-username')?.focus()
+      document.getElementById('landing-email')?.focus()
     }, 380)
   }, [])
 
-  useEffect(() => {
-    if (authLoading || !user) return
-    if (isAdminAreaRole(user.role)) router.replace('/admin')
-    else if (user.role === 'teacher') router.replace('/teacher/dashboard')
-    else router.replace('/dashboard')
-  }, [authLoading, user, router])
+  const goToApp = useCallback(
+    (role?: Parameters<typeof isAdminAreaRole>[0] | 'teacher' | 'student') => {
+      const next =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('redirect')
+          : null
+      const safeNext =
+        next && next.startsWith('/') && !next.startsWith('//') ? next : null
+      if (safeNext) {
+        router.push(safeNext)
+        return
+      }
+      if (isAdminAreaRole(role)) router.push('/admin')
+      else if (role === 'teacher') router.push('/teacher/dashboard')
+      else router.push('/dashboard')
+    },
+    [router],
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
-    const res = await login(username.trim(), password)
+    const res = await login(username, password)
     setIsLoading(false)
     if (!res.ok || !res.session) {
       setError(res.error ?? t('auth.loginFailed'))
       return
     }
-    if (isAdminAreaRole(res.session.role)) router.push('/admin')
-    else if (res.session.role === 'teacher') router.push('/teacher/dashboard')
-    else router.push('/dashboard')
-  }
-
-  if (!authLoading && user) {
-    return (
-      <div className="relative flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#030712] p-6 text-zinc-100">
-        <Loader2 className="h-8 w-8 animate-spin text-sky-400" aria-hidden />
-        <p className="text-sm text-zinc-400">{t('landing.redirecting')}</p>
-      </div>
-    )
+    goToApp(res.session.role)
   }
 
   return (
@@ -162,21 +163,22 @@ export default function LandingPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-300" htmlFor="landing-username">
+                    <label className="text-xs font-medium text-zinc-300" htmlFor="landing-email">
                       {t('landing.username')}
                     </label>
                     <div className="relative">
-                      <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                      <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                       <Input
-                        id="landing-username"
-                        type="text"
+                        id="landing-email"
+                        type="email"
+                        inputMode="email"
                         placeholder={t('landing.usernamePlaceholder')}
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="h-11 border-white/15 bg-white/95 pl-10 text-slate-900 placeholder:text-slate-400"
                         required
-                        autoComplete="username"
-                        disabled={isLoading || authLoading}
+                        autoComplete="email"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -196,7 +198,7 @@ export default function LandingPage() {
                         className="h-11 border-white/15 bg-white/95 pl-10 text-slate-900 placeholder:text-slate-400"
                         required
                         autoComplete="current-password"
-                        disabled={isLoading || authLoading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -206,17 +208,12 @@ export default function LandingPage() {
                   <Button
                     type="submit"
                     className="mt-2 h-11 w-full rounded-xl bg-sky-500 font-semibold text-white shadow-[0_0_32px_-8px_rgba(14,165,233,0.7)] hover:bg-sky-400"
-                    disabled={isLoading || authLoading}
+                    disabled={isLoading}
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         {t('landing.loggingIn')}
-                      </>
-                    ) : authLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t('landing.checkingSession')}
                       </>
                     ) : (
                       t('landing.continue')

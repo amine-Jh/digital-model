@@ -26,7 +26,7 @@ Everything the database needs (tables, security rules, roles, test catalogue) is
 Check it worked (same SQL editor):
 
 ```sql
-select count(*) as active_tests from public.tests where is_active;   -- expect 34
+select count(*) as active_tests from public.tests where is_active;   -- expect 35
 select tablename, rowsecurity from pg_tables where schemaname = 'public' order by 1;  -- all true
 ```
 
@@ -38,7 +38,7 @@ What the script creates:
 | `profiles`                                                         | One row per user (email, name, **role**, school). Created automatically on signup. |
 | `schools`                                                          | Établissements. Teachers belong to one; students pick one.                         |
 | `student_profiles`                                                 | Student academic data + the teacher they chose.                                    |
-| `tests`                                                            | Test catalogue (34 active tests + 11 hidden legacy ids).                           |
+| `tests`                                                            | Test catalogue (35 active tests + 11 hidden legacy ids).                           |
 | `test_sessions`, `trial_results`                                   | Every attempt and every answer.                                                    |
 | `geometry_session_part_scores`, `geometry_session_capacity_scores` | Geometry analytics.                                                                |
 | `questions`, `metrics`                                             | Reserved for later (question bank, aggregates).                                    |
@@ -198,7 +198,7 @@ update public.profiles set role = 'teacher' where email = 'person@school.ma';
 
 ## Step 7 — Tests (catalogue)
 
-All 34 tests are already inserted by `setup.sql`, section 8. Nothing else to do.
+All 35 tests are already inserted by `setup.sql`, section 8. Nothing else to do.
 
 To **hide** a test from students:
 

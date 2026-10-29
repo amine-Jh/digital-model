@@ -59,6 +59,8 @@ import { SYMETRIE_CENTRALE_TEST_ID } from '@/lib/geometry/symetrie-centrale'
 import { SymetrieCentraleQuiz } from '@/components/geometry/symetrie-centrale-quiz'
 import { PRODUIT_SCALAIRE_TEST_ID } from '@/lib/geometry/produit-scalaire'
 import { ProduitScalaireQuiz } from '@/components/geometry/produit-scalaire-quiz'
+import { SPACE_VOLUMES_TEST_ID } from '@/lib/geometry/space-volumes'
+import { SpaceVolumesQuiz } from '@/components/geometry/space-volumes-quiz'
 
 interface TestPageProps {
   params: Promise<{ testId: string }>
@@ -153,6 +155,9 @@ export default function TestPage({ params }: TestPageProps) {
   }
   if (testId === PRODUIT_SCALAIRE_TEST_ID) {
     return <ProduitScalaireQuiz />
+  }
+  if (testId === SPACE_VOLUMES_TEST_ID) {
+    return <SpaceVolumesQuiz />
   }
 
   return <GenericTestRunner test={test} />

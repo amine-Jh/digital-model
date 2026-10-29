@@ -1,8 +1,13 @@
-# Next.js on Netlify — @netlify/plugin-nextjs (configured in Netlify UI).
-# Build command / publish dir may also be set in the UI; this file adds secrets-scan exceptions.
+# Next.js on Netlify — OpenNext adapter is applied automatically (do not pin
+# @netlify/plugin-nextjs unless you need a specific version).
+
+[build]
+  command = "npm run build"
+  publish = ".next"
 
 [build.environment]
-  # NEXT_PUBLIC_* Supabase values are meant for the browser and edge middleware.
-  # They are inlined into `.netlify/edge-functions/.../node-middleware.js` at build time.
-  # Netlify secrets scanning otherwise fails the deploy (exit code 2).
+  NODE_VERSION = "20"
+  # NEXT_PUBLIC_* values are inlined into the browser bundle and edge middleware.
+  # If they are flagged as secrets in the Netlify UI, scanning fails the deploy.
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  SECRETS_SCAN_OMIT_PATHS = ".next,.netlify,node_modules"

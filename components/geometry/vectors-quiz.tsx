@@ -13,12 +13,22 @@ import {
   VECTORS_TEST_ID,
   VectorsResult,
   VectorsTrialResult,
+  VectorsFillField,
+  gradedPlacementExpected,
+  hasGradedFillIn,
+  isVectorsAutoEvalQuestion,
+  isVectorsScorableQuestion,
+  scoreVectorsFillIn,
+  scoreVectorsPlacements,
   saveVectorsResult,
 } from '@/lib/geometry/geo-vectors-complete'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import type { Json } from '@/lib/types/database'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
-import { ClickableVectorsPlane } from '@/components/geometry/clickable-vectors-plane'
+import {
+  ClickableVectorsPlane,
+  type VectorsPlaneMark,
+} from '@/components/geometry/clickable-vectors-plane'
 import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
@@ -29,75 +39,25 @@ import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-s
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
-function parsePlacementsFromFreeText(freeText: string): { name: string; x: number; y: number }[] {
-  const out: { name: string; x: number; y: number }[] = []
-  const re = /(\w+)\((-?\d+)\s*;\s*(-?\d+)\)/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(freeText)) != null) {
-    out.push({ name: m[1], x: Number(m[2]), y: Number(m[3]) })
-  }
-  return out
-}
-
-function scorePlacements(
-  freeText: string,
-  expected: { name: string; x: number; y: number }[],
-): number {
-  const got = parsePlacementsFromFreeText(freeText)
-  if (got.length < expected.length) return 0
-  let ok = 0
-  for (const e of expected) {
-    const g = got.find((p) => p.name === e.name)
-    if (g && g.x === e.x && g.y === e.y) ok++
-  }
-  return ok / expected.length
-}
-
-function normNumericInput(s: string): number | null {
-  const t = s.trim().replace(',', '.').replace(/\s+/g, '')
-  if (!t) return null
-  if (t.includes('/')) {
-    const [a, b] = t.split('/')
-    const na = Number(a)
-    const nb = Number(b)
-    if (!Number.isFinite(na) || !Number.isFinite(nb) || nb === 0) return null
-    return na / nb
-  }
-  const n = Number(t)
-  return Number.isFinite(n) ? n : null
-}
-
-function scoreOrderedFillIn(freeText: string, expected: string[]): number {
-  const parts = freeText.split(' ; ').map((x) => x.trim())
-  if (parts.length < expected.length) return 0
-  let ok = 0
-  for (let i = 0; i < expected.length; i++) {
-    const a = normNumericInput(parts[i] ?? '')
-    const b = normNumericInput(expected[i] ?? '')
-    if (a == null || b == null) continue
-    if (Math.abs(a - b) < 1e-9) ok++
-  }
-  return ok / expected.length
-}
-
 function isVectorsScorableIndex(i: number): boolean {
   const q = VECTORS_QUESTIONS[i]
   if (!q) return false
-  const gradedManual =
-    (q.placementExpected?.length ?? 0) > 0 || q.fillGraded === true
-  if (q.correctAnswer === null && !gradedManual) return false
+  if (!isVectorsScorableQuestion(q)) return false
   return !isExcludedFromGeometryScoreAndAverage({
     ...q,
     question: q.question,
   })
 }
 
-function arrayEquals(a: number[], b: number[]) {
-  if (a.length !== b.length) return false
-  const as = [...a].sort()
-  const bs = [...b].sort()
-  return as.every((v, i) => v === bs[i])
+type SequentialOutcome = {
+  name: string
+  chosen: { x: number; y: number }
+  expected: { x: number; y: number }
+  correct: boolean
+  score: number
 }
+
+const SEQUENTIAL_ADVANCE_MS = 900
 
 export function VectorsQuizTest() {
   const router = useRouter()
@@ -123,28 +83,59 @@ export function VectorsQuizTest() {
     )
   }
 
+  const finishTrial = useCallback(
+    (opts: { freeText?: string; score: number; selectedList?: number[] }) => {
+      const maxIx = Math.max(0, VECTORS_QUESTIONS.length - 1)
+      const idx = Math.min(Math.max(0, current), maxIx)
+      const q = VECTORS_QUESTIONS[idx]
+      if (!q) return
+      const sel = opts.selectedList ?? selectedList
+      const trial: VectorsTrialResult = {
+        index: idx,
+        questionId: q.id,
+        selected: sel[0] ?? -1,
+        selectedList: [...sel],
+        freeText: opts.freeText,
+        correct: opts.score === 1,
+        score: opts.score,
+        reactionTimeMs: Date.now() - trialStart.current,
+      }
+      setTrials((t) => [...t, trial])
+      setSelectedList([])
+      setFreeText('')
+      if (idx + 1 >= VECTORS_QUESTIONS.length) {
+        setPhase('done')
+      } else {
+        setCurrent((n) => n + 1)
+        setTimeout(() => {
+          trialStart.current = Date.now()
+        }, 100)
+      }
+    },
+    [current, selectedList],
+  )
+
   const submit = useCallback(() => {
     const maxIx = Math.max(0, VECTORS_QUESTIONS.length - 1)
     const idx = Math.min(Math.max(0, current), maxIx)
     const q = VECTORS_QUESTIONS[idx]
     if (!q) return
 
-    const gradePP = (q.placementExpected?.length ?? 0) > 0
-    const gradeFI = q.fillGraded === true && Boolean(q.fillIn)
-    const isManualRecord =
-      (Boolean(q.pointPlacement) && !gradePP) ||
-      (Boolean(q.fillIn) && !gradeFI)
+    const gradePP = gradedPlacementExpected(q).length > 0
+    const gradeFI = hasGradedFillIn(q)
+    const isAutoEval = isVectorsAutoEvalQuestion(q)
+    const isSequential = q.sequentialPlacement === true
 
-    if (!gradePP && !gradeFI && !isManualRecord && selectedList.length === 0) return
+    if (isSequential) return
+    if (!gradePP && !gradeFI && !isAutoEval && selectedList.length === 0) return
     if ((gradePP || gradeFI) && !freeText.trim()) return
 
     let score = 0
     if (gradePP && q.placementExpected) {
-      score = scorePlacements(freeText, q.placementExpected)
+      score = scoreVectorsPlacements(freeText, q.placementExpected)
     } else if (gradeFI && q.fillIn) {
-      const exp = q.fillIn.fields.map((f) => f.expected ?? '').filter((x) => x.length > 0)
-      score = scoreOrderedFillIn(freeText, exp)
-    } else if (!isManualRecord) {
+      score = scoreVectorsFillIn(freeText, q.fillIn.fields)
+    } else if (!isAutoEval) {
       score = scoreGeometryQuestion({
         options: q.options,
         selected: selectedList,
@@ -153,29 +144,12 @@ export function VectorsQuizTest() {
     }
 
     const isFree = Boolean(q.pointPlacement || q.fillIn)
-    const trial: VectorsTrialResult = {
-      index: idx,
-      questionId: q.id,
-      selected: selectedList[0] ?? -1,
-      selectedList: [...selectedList],
-      freeText: isFree ? freeText : undefined,
-      correct: score === 1,
+    finishTrial({
       score,
-      reactionTimeMs: Date.now() - trialStart.current,
-    }
-    setTrials((t) => [...t, trial])
-    setSelectedList([])
-    setFreeText('')
-
-    if (idx + 1 >= VECTORS_QUESTIONS.length) {
-      setPhase('done')
-    } else {
-      setCurrent((n) => n + 1)
-      setTimeout(() => {
-        trialStart.current = Date.now()
-      }, 100)
-    }
-  }, [current, selectedList, freeText])
+      freeText: isFree ? freeText : undefined,
+      selectedList,
+    })
+  }, [current, selectedList, freeText, finishTrial])
 
   useEffect(() => {
     if (phase !== 'running') return
@@ -291,19 +265,20 @@ export function VectorsQuizTest() {
     )
   }
 
-  return (
-    <TrialView
-      index={safeCurrent}
-      total={VECTORS_QUESTIONS.length}
-      question={question}
-      selectedList={selectedList}
-      isMulti={isMulti}
-      freeText={freeText}
-      onChangeFreeText={setFreeText}
-      onToggle={toggleSelect}
-      onSubmit={submit}
-    />
-  )
+    return (
+      <TrialView
+        index={safeCurrent}
+        total={VECTORS_QUESTIONS.length}
+        question={question}
+        selectedList={selectedList}
+        isMulti={isMulti}
+        freeText={freeText}
+        onChangeFreeText={setFreeText}
+        onToggle={toggleSelect}
+        onSubmit={submit}
+        onSequentialComplete={(payload) => finishTrial(payload)}
+      />
+    )
 }
 
 function Intro({ onStart, onQuit }: { onStart: () => void; onQuit: () => void }) {
@@ -360,8 +335,12 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
             <strong>4.</strong> Cliquez « Valider » pour passer à la question suivante.
           </li>
           <li>
-            <strong>5.</strong> Une réponse est correcte uniquement si toutes les bonnes options
-            sont cochées (et aucune mauvaise).
+            <strong>5.</strong> QCM : toutes les bonnes options doivent être cochées (et aucune
+            mauvaise) pour le point entier ; crédit partiel si le barème le prévoit.
+          </li>
+          <li>
+            <strong>6.</strong> Q9 à Q11 (placements) et Q18 (coefficients) sont notées et
+            comptent pour la capacité C1 et le score global.
           </li>
         </ol>
         <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
@@ -385,6 +364,7 @@ interface TrialViewProps {
   onChangeFreeText: (v: string) => void
   onToggle: (idx: number) => void
   onSubmit: () => void
+  onSequentialComplete: (opts: { freeText: string; score: number }) => void
 }
 
 function renderInlineLatex(text: string): string {
@@ -409,17 +389,27 @@ function TrialView({
   onChangeFreeText,
   onToggle,
   onSubmit,
+  onSequentialComplete,
 }: TrialViewProps) {
   const showPlane = question.showCoordPlane === true
   const hasImage = Boolean(question.imagePath)
   const isFillIn = Boolean(question.fillIn)
   const isPointPlacement = Boolean(question.pointPlacement)
+  const isSequential = question.sequentialPlacement === true
   const isFreeForm = isFillIn || isPointPlacement
   const splitLayout = hasImage || showPlane || isPointPlacement
 
   const figurePanel = (
     <div className="space-y-3">
-      {isPointPlacement && question.pointPlacement && (
+      {isSequential && question.pointPlacement && (
+        <SequentialPlacementBoard
+          key={question.id}
+          questionId={question.id}
+          labels={question.pointPlacement.labels}
+          onComplete={onSequentialComplete}
+        />
+      )}
+      {isPointPlacement && !isSequential && question.pointPlacement && (
         <ClickableVectorsPlane
           labels={question.pointPlacement.labels}
           onChange={(pts) =>
@@ -463,9 +453,16 @@ function TrialView({
         <FillInFields fields={question.fillIn.fields} value={freeText} onChange={onChangeFreeText} />
       )}
 
-      {isPointPlacement && (
+      {isPointPlacement && !isSequential && (
         <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30">
           ✍️ Placez le(s) point(s) en cliquant sur le repère à gauche.
+        </div>
+      )}
+      {isSequential && (
+        <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30">
+          ✍️ Placez le point demandé en cliquant sur un nœud du repère. La
+          vérification est immédiate ; le point suivant (ou la question suivante)
+          s’enchaîne automatiquement.
         </div>
       )}
 
@@ -511,14 +508,16 @@ function TrialView({
         </div>
       )}
 
-      <Button
-        onClick={onSubmit}
-        disabled={!isFreeForm && selectedList.length === 0}
-        className="w-full"
-        size="lg"
-      >
-        Valider <ArrowRight className="ml-2 h-4 w-4" />
-      </Button>
+      {!isSequential && (
+        <Button
+          onClick={onSubmit}
+          disabled={!isFreeForm && selectedList.length === 0}
+          className="w-full"
+          size="lg"
+        >
+          Valider <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      )}
     </div>
   )
 
@@ -553,6 +552,121 @@ function TrialView({
   )
 }
 
+function SequentialPlacementBoard({
+  questionId,
+  labels,
+  onComplete,
+}: {
+  questionId: string
+  labels: string[]
+  onComplete: (opts: { freeText: string; score: number }) => void
+}) {
+  const [step, setStep] = useState(0)
+  const [marks, setMarks] = useState<VectorsPlaneMark[]>([])
+  const [outcomes, setOutcomes] = useState<SequentialOutcome[]>([])
+  const [locked, setLocked] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const busy = useRef(false)
+
+  const activeLabel = labels[step] ?? null
+
+  const handlePlace = async (placed: { name: string; x: number; y: number }) => {
+    if (busy.current || locked || !activeLabel) return
+    if (placed.name !== activeLabel) return
+    busy.current = true
+    setLocked(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/geometry/vectors-placement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId,
+          name: placed.name,
+          x: placed.x,
+          y: placed.y,
+        }),
+      })
+      const data = (await res.json()) as SequentialOutcome & {
+        error?: string
+        nextName?: string | null
+        pointCount?: number
+      }
+      if (!res.ok || data.error) {
+        setError(data.error || 'Vérification impossible.')
+        busy.current = false
+        setLocked(false)
+        return
+      }
+      const outcome: SequentialOutcome = {
+        name: data.name,
+        chosen: data.chosen,
+        expected: data.expected,
+        correct: data.correct,
+        score: data.score,
+      }
+      const nextMarks: VectorsPlaneMark[] = [
+        ...marks,
+        {
+          name: outcome.name,
+          x: outcome.chosen.x,
+          y: outcome.chosen.y,
+          correct: outcome.correct,
+        },
+      ]
+      const nextOutcomes = [...outcomes, outcome]
+      setMarks(nextMarks)
+      setOutcomes(nextOutcomes)
+
+      window.setTimeout(() => {
+        const last = step + 1 >= labels.length
+        if (last) {
+          const earned = nextOutcomes.reduce((s, o) => s + o.score, 0)
+          onComplete({
+            freeText: JSON.stringify({
+              questionId,
+              points: nextOutcomes.map((o) => ({
+                name: o.name,
+                chosen: o.chosen,
+                expected: o.expected,
+                correct: o.correct,
+                score: o.score,
+              })),
+              score: labels.length > 0 ? earned / labels.length : 0,
+            }),
+            score: labels.length > 0 ? earned / labels.length : 0,
+          })
+        } else {
+          setStep((n) => n + 1)
+          busy.current = false
+          setLocked(false)
+        }
+      }, SEQUENTIAL_ADVANCE_MS)
+    } catch {
+      setError('Vérification impossible.')
+      busy.current = false
+      setLocked(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">
+        Placez le point <span className="text-blue-700">{activeLabel}</span>
+      </p>
+      <ClickableVectorsPlane
+        labels={labels}
+        mode="sequential"
+        activeLabel={activeLabel}
+        marks={marks}
+        locked={locked}
+        onPlace={handlePlace}
+      />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  )
+}
+
 // Inline numeric coefficient inputs (Q18). Stores all values back to a single
 // `freeText` string for persistence — format: "v1 ; v2 ; v3".
 function FillInFields({
@@ -560,7 +674,7 @@ function FillInFields({
   value,
   onChange,
 }: {
-  fields: { label: string; expected?: string }[]
+  fields: VectorsFillField[]
   value: string
   onChange: (v: string) => void
 }) {
@@ -665,7 +779,24 @@ function Results({ trials, onExit }: ResultsProps) {
           <p className="mb-2 text-xs font-semibold text-muted-foreground">Détails :</p>
           {trials.map((t) => {
             const q = VECTORS_QUESTIONS[t.index]
-            const isAutoEval = q.correctAnswer === null
+            const isAutoEval = q ? isVectorsAutoEvalQuestion(q) : false
+            const frac = t.score ?? (t.correct ? 1 : 0)
+            let pointLines: string[] = []
+            if (t.freeText?.startsWith('{')) {
+              try {
+                const parsed = JSON.parse(t.freeText) as {
+                  points?: SequentialOutcome[]
+                }
+                if (Array.isArray(parsed.points)) {
+                  pointLines = parsed.points.map(
+                    (p) =>
+                      `${p.name}(${p.chosen.x};${p.chosen.y}) ${p.correct ? '✓' : '✗'}`,
+                  )
+                }
+              } catch {
+                pointLines = []
+              }
+            }
             return (
               <div
                 key={t.index}
@@ -676,9 +807,17 @@ function Results({ trials, onExit }: ResultsProps) {
                     {t.questionId}: Auto-évaluation
                   </span>
                 ) : (
-                  <span className={t.correct ? 'text-green-600' : 'text-red-600'}>
-                    {t.questionId}: {t.correct ? '✓ Correct' : '✗ Incorrect'}
-                  </span>
+                  <div>
+                    <span className={t.correct ? 'text-green-600' : 'text-red-600'}>
+                      {t.questionId}: {t.correct ? '✓ Correct' : `✗ ${Math.round(frac * 100)} %`}
+                      {q?.competencies?.length ? ` (${q.competencies.join(', ')})` : ''}
+                    </span>
+                    {pointLines.map((line) => (
+                      <p key={line} className="pl-2 text-slate-600 dark:text-slate-400">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </div>
             )

@@ -665,6 +665,7 @@ insert into public.tests (id, name, domain, description, is_active) values
   ('test-geo-trig-circle',         'Cercle trigonométrique interactif',  'cognition-geometrie', 'CogniTest catalogue', true),
   ('test-geo-space',               'Géométrie dans l''espace',           'cognition-geometrie', 'CogniTest catalogue', true),
   ('test-geo-produit-scalaire',    'Produit scalaire',                   'cognition-geometrie', 'CogniTest catalogue', true),
+  ('test-geo-space-volumes',       'Géométrie dans l''espace : volumes', 'cognition-geometrie', 'CogniTest catalogue', true),
   -- Legacy ids still referenced by older navigation / scoring code (hidden from the catalogue)
   ('test-symetrie-axiale',         'Symétrie axiale (legacy)',           'cognition-geometrie', 'Legacy id', false),
   ('test-symetrie-centrale',       'Symétrie centrale (legacy)',         'cognition-geometrie', 'Legacy id', false),

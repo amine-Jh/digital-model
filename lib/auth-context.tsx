@@ -11,6 +11,7 @@ import {
 import type {User} from '@supabase/supabase-js'
 import type {AuthSession, PublicRegisterRole, UserRole} from '@/lib/auth-types'
 import {getSupabaseBrowser} from '@/lib/supabase/client'
+import {isValidAuthEmail, normalizeAuthEmail} from '@/lib/auth-email'
 
 export type RegisterOutcome =
     | { ok: false; error: string }
@@ -66,9 +67,15 @@ async function buildAuthSession(user: User | null): Promise<AuthSession | null> 
 /** Initial hydration: local session only, no `getUser()` re-entry issues. */
 async function hydrateFromBrowserSession(): Promise<AuthSession | null> {
     const sb = getSupabaseBrowser()
-    const {
-        data: {session},
-    } = await sb.auth.getSession()
+    const session = await Promise.race([
+        sb.auth
+            .getSession()
+            .then((r) => r.data.session ?? null)
+            .catch(() => null),
+        new Promise<null>((resolve) => {
+            setTimeout(() => resolve(null), 4000)
+        }),
+    ])
     return buildAuthSession(session?.user ?? null)
 }
 
@@ -95,7 +102,15 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
                 if (!cancelled) setLoading(false)
             })
 
-        const sb = getSupabaseBrowser()
+        let sb
+        try {
+            sb = getSupabaseBrowser()
+        } catch {
+            return () => {
+                cancelled = true
+                clearTimeout(safety)
+            }
+        }
         const {data: sub} = sb.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT') {
                 queueMicrotask(() => {
@@ -124,10 +139,30 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
     }, [])
 
     const login = useCallback(async (email: string, password: string) => {
-        const sb = getSupabaseBrowser()
-        const {data, error} = await sb.auth.signInWithPassword({email, password})
+        const normalized = normalizeAuthEmail(email)
+        if (!isValidAuthEmail(normalized)) {
+            return {ok: false, error: 'Saisissez l’e-mail du compte (pas un identifiant).'}
+        }
+        let sb
+        try {
+            sb = getSupabaseBrowser()
+        } catch (e) {
+            return {
+                ok: false,
+                error: e instanceof Error ? e.message : 'Supabase is not configured.',
+            }
+        }
+        const {data, error} = await sb.auth.signInWithPassword({email: normalized, password})
         if (error || !data.user) {
-            return {ok: false, error: error?.message ?? 'Login failed'}
+            const raw = error?.message ?? 'Login failed'
+            if (/email not confirmed/i.test(raw)) {
+                return {
+                    ok: false,
+                    error:
+                        'E-mail non confirmé. Ouvrez le lien reçu, ou désactivez « Confirm email » dans Supabase Auth.',
+                }
+            }
+            return {ok: false, error: raw}
         }
         const session = await buildAuthSession(data.user)
         if (!session) return {ok: false, error: 'Profile lookup failed'}
@@ -153,16 +188,39 @@ export function AuthProvider({children}: { children: React.ReactNode }) {
                     }
                 }
             }
-            const sb = getSupabaseBrowser()
+            const accountEmail = normalizeAuthEmail(email)
+            if (!isValidAuthEmail(accountEmail)) {
+                return {
+                    ok: false as const,
+                    error: 'Saisissez une adresse e-mail valide pour créer le compte.',
+                }
+            }
+            if (password.length < 6) {
+                return {
+                    ok: false as const,
+                    error: 'Le mot de passe doit contenir au moins 6 caractères.',
+                }
+            }
+            let sb
+            try {
+                sb = getSupabaseBrowser()
+            } catch (e) {
+                return {
+                    ok: false as const,
+                    error: e instanceof Error ? e.message : 'Supabase is not configured.',
+                }
+            }
             const meta: Record<string, string> = {role, full_name: fullName ?? ''}
             if (role === 'teacher' && schoolIdForTeacher) {
                 meta.school_id = schoolIdForTeacher.trim()
             }
             const {data, error} = await sb.auth.signUp({
-                email,
+                email: accountEmail,
                 password,
                 options: {
                     data: meta,
+                    emailRedirectTo:
+                        typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
                 },
             })
             if (error) {
