@@ -20,7 +20,11 @@ import {
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
 import { InteractiveLinePlot } from '@/components/geometry/interactive-line-plot'
-import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
+import {
+  scoreGeometryQuestion,
+  scorePenalizedMulti,
+  computeFinalPercent,
+} from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
@@ -141,11 +145,17 @@ export function ProduitScalaireQuiz() {
 
     if (selectedList.length === 0) return
 
-    const score = scoreGeometryQuestion({
-      options: q.options,
-      selected: selectedList,
-      correctAnswer: q.correctAnswer,
-    })
+    const score = Array.isArray(q.correctAnswer)
+      ? scorePenalizedMulti({
+          options: q.options,
+          selected: selectedList,
+          correctAnswer: q.correctAnswer,
+        })
+      : scoreGeometryQuestion({
+          options: q.options,
+          selected: selectedList,
+          correctAnswer: q.correctAnswer,
+        })
 
     const trial: ProduitScalaireTrialResult = {
       index: i,
@@ -635,15 +645,29 @@ function Results({ trials, onExit }: ResultsProps) {
       question: q.question,
     })
   })
-  const correct = scorable.filter((t) => t.correct).length
-  const pct = scorable.length > 0 ? Math.round((correct / scorable.length) * 100) : 0
+  const scoreOf = (t: ProduitScalaireTrialResult) => t.score ?? (t.correct ? 1 : 0)
+  const correct = scorable.filter((t) => scoreOf(t) === 1).length
+  const partial = scorable.filter((t) => scoreOf(t) > 0 && scoreOf(t) < 1).length
+  const incorrect = scorable.filter(
+    (t) => scoreOf(t) === 0 && (t.selected.length > 0 || Boolean(t.freeText)),
+  ).length
+  const unanswered = scorable.filter(
+    (t) => scoreOf(t) === 0 && t.selected.length === 0 && !t.freeText,
+  ).length
+  const earned = scorable.reduce((s, t) => s + scoreOf(t), 0)
+  const pct = computeFinalPercent(scorable.map(scoreOf))
 
   const byType = (code: 1 | 2 | 3) => {
     const items = scorable.filter(
       (t) => PRODUIT_SCALAIRE_QUESTIONS[t.index].typeCode === code,
     )
-    const ok = items.filter((t) => t.correct).length
-    return { ok, total: items.length }
+    const ok = items.filter((t) => scoreOf(t) === 1).length
+    const part = items.filter((t) => scoreOf(t) > 0 && scoreOf(t) < 1).length
+    const bad = items.filter(
+      (t) => scoreOf(t) === 0 && (t.selected.length > 0 || Boolean(t.freeText)),
+    ).length
+    const earnedPart = items.reduce((s, t) => s + scoreOf(t), 0)
+    return { ok, part, bad, total: items.length, earned: earnedPart }
   }
   const byLesson = (code: 1 | 2) => {
     const items = scorable.filter(
@@ -720,7 +744,11 @@ function Results({ trials, onExit }: ResultsProps) {
         <div className="mb-6 rounded-lg border bg-muted/30 p-6">
           <div className="text-5xl font-bold text-indigo-600">{pct}%</div>
           <div className="mt-1 text-sm text-muted-foreground">
-            {correct} / {scorable.length} réponses correctes (auto-notées)
+            {earned.toFixed(2)} / {scorable.length} points
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            {correct} correctes · {partial} partielles · {incorrect} incorrectes ·{' '}
+            {unanswered} non répondues
           </div>
           {openCount > 0 && (
             <div className="mt-1 text-xs text-muted-foreground">
@@ -739,19 +767,28 @@ function Results({ trials, onExit }: ResultsProps) {
           <div className="rounded border p-3">
             <div className="text-xs text-muted-foreground">Cours (T1)</div>
             <div className="text-lg font-semibold">
-              {t1.ok} / {t1.total}
+              {t1.earned.toFixed(1)} / {t1.total}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {t1.ok} correctes · {t1.part} partielles · {t1.bad} incorrectes
             </div>
           </div>
           <div className="rounded border p-3">
             <div className="text-xs text-muted-foreground">Visualisation (T2)</div>
             <div className="text-lg font-semibold">
-              {t2.ok} / {t2.total}
+              {t2.earned.toFixed(1)} / {t2.total}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {t2.ok} correctes · {t2.part} partielles · {t2.bad} incorrectes
             </div>
           </div>
           <div className="rounded border p-3">
             <div className="text-xs text-muted-foreground">Raisonnement (T3)</div>
             <div className="text-lg font-semibold">
-              {t3.ok} / {t3.total}
+              {t3.earned.toFixed(1)} / {t3.total}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {t3.ok} correctes · {t3.part} partielles · {t3.bad} incorrectes
             </div>
           </div>
         </div>
@@ -779,6 +816,68 @@ function Results({ trials, onExit }: ResultsProps) {
           breakdown={geo.capacityBreakdown}
           unit="fraction"
         />
+
+        <h3 className="mb-2 mt-6 text-left text-sm font-semibold text-muted-foreground">
+          Détail par question
+        </h3>
+        <div className="mb-6 max-h-80 space-y-2 overflow-y-auto text-left text-sm">
+          {trials.map((t) => {
+            const q = PRODUIT_SCALAIRE_QUESTIONS[t.index]
+            if (!q) return null
+            const s = scoreOf(t)
+            const expected = Array.isArray(q.correctAnswer)
+              ? q.correctAnswer
+              : q.correctAnswer === null
+                ? []
+                : [q.correctAnswer]
+            const picked = new Set(t.selected)
+            const expectedSet = new Set(expected)
+            const status = q.isDiagnostic
+              ? 'Auto-évaluation'
+              : q.isOpenEnded || (q.interactiveLine && !q.interactiveLine.graded)
+                ? 'Non notée'
+                : t.selected.length === 0 && !t.freeText
+                  ? 'Non répondue'
+                  : s === 1
+                    ? 'Correcte'
+                    : s > 0
+                      ? 'Partielle'
+                      : 'Incorrecte'
+            const letters = (ids: number[]) =>
+              ids.length === 0
+                ? '—'
+                : [...ids]
+                    .sort((a, b) => a - b)
+                    .map((i) => String.fromCharCode(65 + i))
+                    .join(', ')
+            return (
+              <div key={t.questionId} className="rounded border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">
+                    {q.number}/26 · {q.id}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {status} · {q.isDiagnostic || q.isOpenEnded ? '—' : `${s.toFixed(2)} / 1`}
+                  </span>
+                </div>
+                {!q.isDiagnostic && !q.isOpenEnded && q.correctAnswer !== null && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Sélection : {letters(t.selected)} · Attendu : {letters(expected)}
+                    {expected.length > 1 && (
+                      <>
+                        {' '}
+                        · justes cochées{' '}
+                        {letters([...picked].filter((i) => expectedSet.has(i)))} · oubliées{' '}
+                        {letters(expected.filter((i) => !picked.has(i)))} · erreurs{' '}
+                        {letters([...picked].filter((i) => !expectedSet.has(i)))}
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
 
         <div className="flex justify-center gap-3">
           <Button variant="outline" onClick={() => window.location.reload()}>

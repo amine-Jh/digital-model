@@ -108,7 +108,7 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
     id: 'Q1',
     number: 1,
     competency: 'C1',
-    kind: 'mcq',
+    kind: 'multi',
     question:
       'L\'image du point \\( A \\) par la symétrie centrale de centre \\( O \\) est le point \\( A\' \\) tel que :',
     options: [
@@ -118,7 +118,7 @@ export const SYMETRIE_CENTRALE_QUESTIONS: SymCentraleQuestion[] = [
       '\\( OA = 2\\cdot OA\' \\)',
       'Je ne sais pas',
     ],
-    correctAnswer: 1,
+    correctAnswer: [0, 1],
     points: 1,
   },
   {

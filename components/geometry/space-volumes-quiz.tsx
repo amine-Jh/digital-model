@@ -26,6 +26,10 @@ import { buildGeometrySessionMetadataPoints } from '@/lib/geometry/capacity-resu
 import { buildGeometryAnalyticsReport } from '@/lib/geometry/geometry-analytics-report'
 import { isExcludedFromGeometryScoreAndAverage } from '@/lib/geometry/geometry-scoring-exclusions'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
+import {
+  isDrawnSpaceVolumesFigure,
+  SpaceVolumesFigureView,
+} from '@/components/geometry/space-volumes-figures'
 
 type Phase = 'intro' | 'instructions' | 'running' | 'done'
 
@@ -292,8 +296,9 @@ function Instructions({ onBegin, onBack }: { onBegin: () => void; onBack: () => 
             contraire.
           </li>
           <li>
-            <strong>2.</strong> Q6 à Q8 s&apos;appuient sur une figure : les dimensions
-            de l&apos;énoncé y figurent.
+            <strong>2.</strong> Chaque question est accompagnée d&apos;une figure statique.
+            Les solides ne sont pas tous vus sous le même angle. Les dimensions utiles
+            sont indiquées ; la figure ne donne pas la réponse.
           </li>
           <li>
             <strong>3.</strong> Validez pour passer à la question suivante. Les bonnes
@@ -431,10 +436,10 @@ function SpaceVolumesFigureSlot({
   imagePath?: string
   questionId: string
 }) {
-  if (figure === 'cube-4') return <CubeFourCm />
-  if (figure === 'pyramid-6-5') return <PyramidSixFive />
-  if (figure === 'cylinder-3-5') return <CylinderThreeFive />
-  return <PhotoSlot src={imagePath} questionId={questionId} />
+  if (!figure || !isDrawnSpaceVolumesFigure(figure)) {
+    return <PhotoSlot src={imagePath} questionId={questionId} />
+  }
+  return <SpaceVolumesFigureView figure={figure} />
 }
 
 function PhotoSlot({ src, questionId }: { src?: string; questionId: string }) {
@@ -462,76 +467,6 @@ function PhotoSlot({ src, questionId }: { src?: string; questionId: string }) {
           </p>
         </div>
       )}
-    </div>
-  )
-}
-
-function CubeFourCm() {
-  return (
-    <div className="rounded-lg border bg-white p-3">
-      <svg viewBox="0 0 280 240" className="mx-auto block w-full max-w-sm">
-        <polygon points="70,90 170,90 210,50 110,50" fill="#e0f2fe" stroke="#0f172a" />
-        <polygon points="170,90 210,50 210,140 170,180" fill="#bae6fd" stroke="#0f172a" />
-        <polygon points="70,90 170,90 170,180 70,180" fill="#f0f9ff" stroke="#0f172a" />
-        <text x="100" y="202" fontSize="13" fontWeight={700} fill="#0f172a">
-          4 cm
-        </text>
-        <line x1="70" y1="186" x2="170" y2="186" stroke="#dc2626" strokeWidth="1.5" />
-      </svg>
-      <p className="mt-1 text-center text-xs text-muted-foreground">
-        Cube — toutes les arêtes mesurent 4 cm.
-      </p>
-    </div>
-  )
-}
-
-function PyramidSixFive() {
-  return (
-    <div className="rounded-lg border bg-white p-3">
-      <svg viewBox="0 0 280 250" className="mx-auto block w-full max-w-sm">
-        <polygon points="60,190 180,190 220,155 100,155" fill="#ecfccb" stroke="#0f172a" />
-        <line x1="140" y1="40" x2="60" y2="190" stroke="#0f172a" />
-        <line x1="140" y1="40" x2="180" y2="190" stroke="#0f172a" />
-        <line x1="140" y1="40" x2="220" y2="155" stroke="#0f172a" />
-        <line x1="140" y1="40" x2="100" y2="155" stroke="#0f172a" />
-        <line x1="140" y1="40" x2="140" y2="172" stroke="#dc2626" strokeDasharray="4 3" />
-        <circle cx="140" cy="172" r="3" fill="#dc2626" />
-        <text x="148" y="110" fontSize="13" fontWeight={700} fill="#dc2626">
-          h = 5 cm
-        </text>
-        <text x="88" y="214" fontSize="13" fontWeight={700} fill="#0f172a">
-          6 cm
-        </text>
-        <line x1="60" y1="198" x2="180" y2="198" stroke="#0f172a" />
-      </svg>
-      <p className="mt-1 text-center text-xs text-muted-foreground">
-        Pyramide à base carrée — hauteur perpendiculaire à la base (distincte des
-        arêtes latérales).
-      </p>
-    </div>
-  )
-}
-
-function CylinderThreeFive() {
-  return (
-    <div className="rounded-lg border bg-white p-3">
-      <svg viewBox="0 0 260 250" className="mx-auto block w-full max-w-sm">
-        <ellipse cx="130" cy="55" rx="70" ry="22" fill="#e0f2fe" stroke="#0f172a" />
-        <line x1="60" y1="55" x2="60" y2="175" stroke="#0f172a" />
-        <line x1="200" y1="55" x2="200" y2="175" stroke="#0f172a" />
-        <ellipse cx="130" cy="175" rx="70" ry="22" fill="#bae6fd" stroke="#0f172a" />
-        <line x1="130" y1="55" x2="200" y2="55" stroke="#dc2626" />
-        <text x="148" y="48" fontSize="13" fontWeight={700} fill="#dc2626">
-          r = 3 cm
-        </text>
-        <line x1="210" y1="55" x2="210" y2="175" stroke="#0f172a" />
-        <text x="214" y="120" fontSize="13" fontWeight={700} fill="#0f172a">
-          5 cm
-        </text>
-      </svg>
-      <p className="mt-1 text-center text-xs text-muted-foreground">
-        Cylindre — rayon de la base (pas le diamètre) et hauteur.
-      </p>
     </div>
   )
 }

@@ -6,7 +6,7 @@
  * 26 questions:
  *   Partie I  (T1, Q1–Q9)   — Cours
  *   Partie II (T2, Q10–Q17) — Visualisation / Construction
- *   Partie III(T3, Q18–Q23, Q25–Q27) — Raisonnement déductif (Q24 retiré)
+ *   Partie III(T3, Q18–Q26) — Raisonnement déductif
  *
  * Code convention: T{type}-D{lesson}-Q{n}
  *   lesson  D1 = Produit scalaire
@@ -121,7 +121,7 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
       '\\( \\vec{U} \\) et \\( \\vec{V} \\) sont orthogonaux',
       "J'ai oublié",
     ],
-    correctAnswer: 1,
+    correctAnswer: [0, 1, 2],
   },
   {
     id: 'T1-D1-Q4',
@@ -205,10 +205,15 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     lessonCode: 2,
     competencies: ['C2'],
     question:
-      'Saisir manuellement les coordonnées des points indiqués sur la figure (format \\( (x, y) \\) ou \\( (x, y, z) \\)).',
-    options: [],
-    correctAnswer: null,
-    isOpenEnded: true,
+      'À partir du repère cartésien ci-dessous, sélectionnez les trois affirmations exactes concernant les coordonnées des points affichés.',
+    options: [
+      '\\( C(3\\,;\\,0) \\)',
+      '\\( D(9\\,;\\,3) \\)',
+      '\\( E(10\\,;\\,6) \\)',
+      '\\( F(5\\,;\\,12) \\)',
+      '\\( D(3\\,;\\,9) \\)',
+    ],
+    correctAnswer: [0, 1, 2],
     imagePath: '/images/geometry/produit scalaire/repere main.png',
   },
 
@@ -220,10 +225,15 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     lessonCode: 2,
     competencies: ['C2'],
     question:
-      'Saisir manuellement les coordonnées des vecteurs indiqués sur la figure (format \\( (x, y) \\) ou \\( (x, y, z) \\)).',
-    options: [],
-    correctAnswer: null,
-    isOpenEnded: true,
+      'À partir du repère cartésien ci-dessous, sélectionnez les trois affirmations exactes concernant les coordonnées des vecteurs \\( \\vec{a} \\), \\( \\vec{v} \\), \\( \\vec{u} \\) et \\( \\vec{w} \\).',
+    options: [
+      '\\( \\vec{u}=(4\\,;\\,4) \\)',
+      '\\( \\vec{v}=(3\\,;\\,0) \\)',
+      '\\( \\vec{w}=(1\\,;\\,3) \\)',
+      '\\( \\vec{a}=(2\\,;\\,3) \\)',
+      '\\( \\vec{v}=(0\\,;\\,3) \\)',
+    ],
+    correctAnswer: [0, 1, 2],
     imagePath: '/images/geometry/produit scalaire/repere main.png',
   },
   {
@@ -427,8 +437,8 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     correctAnswer: 2,
   },
   {
-    id: 'T3-D2-Q25',
-    number: 25,
+    id: 'T3-D2-Q24',
+    number: 24,
     typeCode: 3,
     lessonCode: 2,
     competencies: ['C4'],
@@ -442,8 +452,8 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     correctAnswer: [0, 1],
   },
   {
-    id: 'T3-D2-Q26',
-    number: 26,
+    id: 'T3-D2-Q25',
+    number: 25,
     typeCode: 3,
     lessonCode: 2,
     competencies: ['C4'],
@@ -457,8 +467,8 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     correctAnswer: 1,
   },
   {
-    id: 'T3-D2-Q27',
-    number: 27,
+    id: 'T3-D2-Q26',
+    number: 26,
     typeCode: 3,
     lessonCode: 2,
     competencies: ['C4'],
@@ -467,7 +477,7 @@ export const PRODUIT_SCALAIRE_QUESTIONS: ProduitScalaireQuestion[] = [
     options: [
       '\\( x^2 + y^2 - 2x + 4y - 16 = 0 \\)',
       '\\( x^2 + y^2 - 2x + 2y - 21 = 0 \\)',
-      '\\( x^2 + y^2 - 2x + 4y - 21 = 0 \\)',
+      '\\( x^2 + y^2 - 2x - 4y - 11 = 0 \\)',
     ],
     correctAnswer: 2,
   },

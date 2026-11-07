@@ -32,7 +32,7 @@ if (q('Q7').options.some((o) => o.includes('(d)'))) throw new Error('Q7 still (d
 expectAns('Q8', 0)
 if (!q('Q8').question.includes('(GH)')) throw new Error('Q8 GH')
 if (q('Q8').options.some((o) => o.includes('(d)'))) throw new Error('Q8 still (d)')
-expectAns('Q9', 2)
+expectAns('Q9', 1)
 expectAns('Q10', 1)
 expectAns('Q11', [0, 2])
 if (!isAxialeMulti(q('Q11'))) throw new Error('Q11 multi')

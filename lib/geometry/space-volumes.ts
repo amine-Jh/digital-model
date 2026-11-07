@@ -14,14 +14,41 @@ export const SPACE_VOLUMES_RESULTS_KEY = 'space-volumes:results'
 export type SpaceVolumesPart = 'course' | 'application' | 'reasoning'
 
 export type SpaceVolumesFigure =
+  | 'cube-frontal'
+  | 'pyramid-base'
+  | 'cylinder-tilt'
+  | 'plane-scale'
+  | 'solid-scale'
   | 'cube-4'
   | 'pyramid-6-5'
   | 'cylinder-3-5'
+  | 'plane-k2'
+  | 'pyramid-scale'
   | 'photo-q11'
   | 'photo-q12'
   | 'photo-q13'
   | 'photo-q14'
   | 'photo-q15'
+
+/**
+ * Static viewing angles. Rotations move the solid, not the decoration.
+ * Q11–Q15 stay on the original photographs and are not drawn here.
+ */
+export const SPACE_VOLUMES_FIGURE_ORIENTATION: Record<
+  Exclude<SpaceVolumesFigure, `photo-${string}`>,
+  string
+> = {
+  'cube-frontal': 'lacet 25°, tangage 12° — face avant dominante',
+  'pyramid-base': 'lacet 15°, base horizontale, hauteur verticale en pointillés',
+  'cylinder-tilt': 'axe incliné de 40° par rapport à la verticale',
+  'plane-scale': 'rectangle plan, figure initiale et image homothétique',
+  'solid-scale': 'deux cubes semblables, le second tourné de 35°',
+  'cube-4': 'lacet 50°, tangage 55° — face supérieure dominante, arête 4 cm',
+  'pyramid-6-5': 'base tournée de 50°, hauteur perpendiculaire à la base (non verticale à l’écran)',
+  'cylinder-3-5': 'axe vertical, ellipse aplatie — surface latérale dominante',
+  'plane-k2': 'rectangle d’aire 18 cm² et image de rapport k = 2',
+  'pyramid-scale': 'pyramide de volume 24 cm³ et image de rapport k = 2, tournée de 30°',
+}
 
 export interface SpaceVolumesQuestion {
   id: string
@@ -80,7 +107,8 @@ export const SPACE_VOLUMES_QUESTIONS: SpaceVolumesQuestion[] = [
     correctAnswer: 0,
     part: 'course',
     points: 1,
-    requiresImage: false,
+    requiresImage: true,
+    figure: 'cube-frontal',
     published: true,
     keyVerified: true,
     correction: 'Réponse correcte : A. \\( V=a^3 \\).',
@@ -99,7 +127,8 @@ export const SPACE_VOLUMES_QUESTIONS: SpaceVolumesQuestion[] = [
     correctAnswer: 1,
     part: 'course',
     points: 1,
-    requiresImage: false,
+    requiresImage: true,
+    figure: 'pyramid-base',
     published: true,
     keyVerified: true,
     correction: 'Réponse correcte : B. \\( V=\\frac{1}{3}Bh \\).',
@@ -118,7 +147,8 @@ export const SPACE_VOLUMES_QUESTIONS: SpaceVolumesQuestion[] = [
     correctAnswer: 2,
     part: 'course',
     points: 1,
-    requiresImage: false,
+    requiresImage: true,
+    figure: 'cylinder-tilt',
     published: true,
     keyVerified: true,
     correction: 'Réponse correcte : C. \\( V=\\pi r^2 h \\).',
@@ -133,7 +163,8 @@ export const SPACE_VOLUMES_QUESTIONS: SpaceVolumesQuestion[] = [
     correctAnswer: 1,
     part: 'course',
     points: 1,
-    requiresImage: false,
+    requiresImage: true,
+    figure: 'plane-scale',
     published: true,
     keyVerified: true,
     correction: 'Réponse correcte : B. Les aires sont multipliées par \\( k^2 \\).',
@@ -148,7 +179,8 @@ export const SPACE_VOLUMES_QUESTIONS: SpaceVolumesQuestion[] = [
     correctAnswer: 2,
     part: 'course',
     points: 1,
-    requiresImage: false,
+    requiresImage: true,
+    figure: 'solid-scale',
     published: true,
     keyVerified: true,
     correction: 'Réponse correcte : C. Les volumes sont multipliés par \\( k^3 \\).',
@@ -229,7 +261,8 @@ export const SPACE_VOLUMES_QUESTIONS: SpaceVolumesQuestion[] = [
     correctAnswer: 2,
     part: 'application',
     points: 1,
-    requiresImage: false,
+    requiresImage: true,
+    figure: 'plane-k2',
     published: true,
     keyVerified: true,
     correction:
@@ -249,7 +282,8 @@ export const SPACE_VOLUMES_QUESTIONS: SpaceVolumesQuestion[] = [
     correctAnswer: 1,
     part: 'application',
     points: 1,
-    requiresImage: false,
+    requiresImage: true,
+    figure: 'pyramid-scale',
     published: true,
     keyVerified: true,
     correction:
