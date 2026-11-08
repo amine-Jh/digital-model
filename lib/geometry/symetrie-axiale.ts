@@ -216,11 +216,11 @@ export const SYMETRIE_AXIALE_QUESTIONS: SymetrieAxialeQuestion[] = [
       'Le symétrique du point $G$ par rapport à $(BD)$ est le point $H$',
       'Aucune réponse',
     ],
-    correctAnswer: 2,
+    correctAnswer: 1,
     requiresImage: true,
     imagePath: IMG,
     part: 'visualization',
-    correction: 'Réponse correcte : C',
+    correction: 'Réponse correcte : B',
     points: 1,
   },
   {

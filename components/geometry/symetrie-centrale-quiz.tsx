@@ -38,7 +38,7 @@ import {
   isSymCentraleScorableQuestion,
 } from '@/lib/geometry/symetrie-centrale'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
-import { scoreGeometryQuestion } from '@/lib/geometry/scoring'
+import { isFullyCorrect } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
@@ -115,13 +115,17 @@ export function SymetrieCentraleQuiz() {
     if (selectedList.length === 0) return
     const q = SYMETRIE_CENTRALE_QUESTIONS[current]
     const excluded = isExcludedFromGeometryScoreAndAverage(q)
+    // All-or-nothing: 1 point only when every correct option is selected
+    // and no incorrect option is selected. Partial selections score 0.
     const score = excluded
       ? 0
-      : scoreGeometryQuestion({
+      : isFullyCorrect({
           options: q.options,
           selected: selectedList,
           correctAnswer: q.correctAnswer,
         })
+        ? 1
+        : 0
     const pointsEarned = excluded || q.points === 0 ? 0 : score * q.points
     const correct = !excluded && score === 1
 
