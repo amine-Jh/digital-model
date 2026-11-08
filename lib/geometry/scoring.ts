@@ -60,6 +60,17 @@ export function scorePenalizedMulti(input: ScoreInput): number {
   return Math.max(0, Math.min(1, ratio))
 }
 
+/**
+ * Default MCQ score. Multi-correct items use the penalized formula.
+ * Single-correct items stay all-or-nothing. Tests that already document
+ * another rule (axial symmetry, central symmetry, vectors placement/fill-in)
+ * must keep calling their own function.
+ */
+export function scoreStandardMcq(input: ScoreInput): number {
+  if (Array.isArray(input.correctAnswer)) return scorePenalizedMulti(input)
+  return scoreGeometryQuestion(input)
+}
+
 /** Returns the per-question score in the closed interval [0, 1]. */
 export function scoreGeometryQuestion(input: ScoreInput): number {
   const { options, selected, correctAnswer } = input

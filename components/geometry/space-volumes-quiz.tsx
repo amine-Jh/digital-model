@@ -18,7 +18,7 @@ import {
   saveSpaceVolumesResult,
 } from '@/lib/geometry/space-volumes'
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
-import { scoreGeometryQuestion } from '@/lib/geometry/scoring'
+import { scoreStandardMcq } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
@@ -81,7 +81,7 @@ export function SpaceVolumesQuiz() {
     const excluded = isExcludedFromGeometryScoreAndAverage(q)
     const score = excluded
       ? 0
-      : scoreGeometryQuestion({
+      : scoreStandardMcq({
           options: q.options,
           selected: selectedList,
           correctAnswer: q.correctAnswer,

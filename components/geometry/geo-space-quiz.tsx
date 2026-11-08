@@ -18,7 +18,7 @@ import {
 import { persistCompletedTestSessionBestEffort } from '@/lib/results/submit-completed-session-api'
 import type { Json } from '@/lib/types/database'
 import { toggleSelectionWithExclusive } from '@/lib/quiz-helpers'
-import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
+import { scoreStandardMcq, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
@@ -71,7 +71,7 @@ export function GeoSpaceQuiz() {
     if (selectedList.length === 0) return
     const q = GEO_SPACE_QUESTIONS[current]
 
-    const score = scoreGeometryQuestion({
+    const score = scoreStandardMcq({
       options: q.options,
       selected: selectedList,
       correctAnswer: q.correctAnswer,

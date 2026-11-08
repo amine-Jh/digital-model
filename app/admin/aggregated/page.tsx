@@ -7,26 +7,33 @@ import { cn } from '@/lib/utils'
 import {
   fetchAdminResultsData,
   domainAverageForAdminStudent,
-  avg,
+  avgDefined,
   type AdminStudentSummary,
 } from '@/lib/admin-results'
 
-function color(v: number) {
+function color(v: number | null) {
+  if (v == null) return 'text-slate-400'
   if (v >= 75) return 'text-green-600'
   if (v >= 50) return 'text-amber-600'
   return 'text-red-500'
 }
 
-function PctBar({ v }: { v: number }) {
+function pct(v: number | null) {
+  return v == null ? 'Non disponible' : `${v}%`
+}
+
+function PctBar({ v }: { v: number | null }) {
   return (
     <div className="h-2 rounded-full bg-slate-100 overflow-hidden w-full">
-      <div
-        className={cn(
-          'h-full',
-          v >= 75 ? 'bg-green-500' : v >= 50 ? 'bg-amber-500' : 'bg-red-400',
-        )}
-        style={{ width: `${Math.min(100, v)}%` }}
-      />
+      {v != null && (
+        <div
+          className={cn(
+            'h-full',
+            v >= 75 ? 'bg-green-500' : v >= 50 ? 'bg-amber-500' : 'bg-red-400',
+          )}
+          style={{ width: `${Math.min(100, v)}%` }}
+        />
+      )}
     </div>
   )
 }
@@ -64,7 +71,7 @@ export default function AggregatedPage() {
     }
     return [...m.entries()].map(([groupId, group]) => {
       const domainAvgs = platformDomains.map((d) =>
-        avg(group.map((st) => domainAverageForAdminStudent(st, d.id))),
+        avgDefined(group.map((st) => domainAverageForAdminStudent(st, d.id))),
       )
       return {
         groupId,
@@ -73,9 +80,9 @@ export default function AggregatedPage() {
         domains: platformDomains.map((d, i) => ({
           id: d.id,
           name: d.name,
-          avg: domainAvgs[i] ?? 0,
+          avg: domainAvgs[i] ?? null,
         })),
-        overall: avg(domainAvgs),
+        overall: avgDefined(domainAvgs),
       }
     })
   }, [students])
@@ -84,7 +91,7 @@ export default function AggregatedPage() {
     const filieres = [...new Set(students.map((s) => s.filiere))]
     return filieres.map((f) => ({
       filiere: f,
-      avg: avg(
+      avg: avgDefined(
         students
           .filter((s) => s.filiere === f)
           .flatMap((s) => platformDomains.map((d) => domainAverageForAdminStudent(s, d.id))),
@@ -96,7 +103,7 @@ export default function AggregatedPage() {
     const levels = [...new Set(students.map((s) => s.level))]
     return levels.map((lv) => ({
       level: lv,
-      avg: avg(
+      avg: avgDefined(
         students
           .filter((s) => s.level === lv)
           .flatMap((s) => platformDomains.map((d) => domainAverageForAdminStudent(s, d.id))),
@@ -108,7 +115,7 @@ export default function AggregatedPage() {
     const insts = [...new Set(students.map((s) => s.institutionId))]
     return insts.map((name) => ({
       name,
-      avg: avg(
+      avg: avgDefined(
         students
           .filter((s) => s.institutionId === name)
           .flatMap((s) => platformDomains.map((d) => domainAverageForAdminStudent(s, d.id))),
@@ -152,7 +159,7 @@ export default function AggregatedPage() {
                     <p className="text-xs text-slate-500">{t.studentCount} élève(s)</p>
                   </div>
                   <span className={cn('text-xl font-bold tabular-nums', color(t.overall))}>
-                    {t.overall}%
+                    {pct(t.overall)}
                   </span>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-x-4 gap-y-2 mt-2">
@@ -160,7 +167,7 @@ export default function AggregatedPage() {
                     <div key={d.id}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="truncate pr-2">{d.name}</span>
-                        <span className={cn('font-bold tabular-nums', color(d.avg))}>{d.avg}%</span>
+                        <span className={cn('font-bold tabular-nums', color(d.avg))}>{pct(d.avg)}</span>
                       </div>
                       <PctBar v={d.avg} />
                     </div>
@@ -182,7 +189,7 @@ export default function AggregatedPage() {
               <div key={f.filiere}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="truncate pr-2">{f.filiere}</span>
-                  <span className={cn('font-bold tabular-nums', color(f.avg))}>{f.avg}%</span>
+                  <span className={cn('font-bold tabular-nums', color(f.avg))}>{pct(f.avg)}</span>
                 </div>
                 <PctBar v={f.avg} />
               </div>
@@ -199,7 +206,7 @@ export default function AggregatedPage() {
               <div key={x.level}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="truncate pr-2">{x.level}</span>
-                  <span className={cn('font-bold tabular-nums', color(x.avg))}>{x.avg}%</span>
+                  <span className={cn('font-bold tabular-nums', color(x.avg))}>{pct(x.avg)}</span>
                 </div>
                 <PctBar v={x.avg} />
               </div>
@@ -216,7 +223,7 @@ export default function AggregatedPage() {
               <div key={x.name}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="truncate pr-2">{x.name}</span>
-                  <span className={cn('font-bold tabular-nums', color(x.avg))}>{x.avg}%</span>
+                  <span className={cn('font-bold tabular-nums', color(x.avg))}>{pct(x.avg)}</span>
                 </div>
                 <PctBar v={x.avg} />
               </div>

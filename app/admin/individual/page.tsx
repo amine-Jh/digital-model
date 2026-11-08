@@ -16,7 +16,8 @@ import { formatCapacityGlyph } from '@/lib/geometry/capacity-definitions'
 import { asciiCompetencyKey } from '@/lib/geometry-mcq'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
 
-function color(v: number) {
+function color(v: number | null) {
+  if (v == null) return 'text-slate-400'
   if (v < 0) return 'text-slate-500'
   if (v >= 75) return 'text-green-600'
   if (v >= 50) return 'text-amber-600'
@@ -144,10 +145,12 @@ export default function IndividualResultsPage() {
                       <div key={d.id}>
                         <div className="flex justify-between text-sm mb-1">
                           <span className="truncate pr-2">{d.name}</span>
-                          <span className={cn('font-bold tabular-nums', color(v))}>{v}%</span>
+                          <span className={cn('font-bold tabular-nums', color(v))}>
+                            {v == null ? 'Non disponible' : `${v}%`}
+                          </span>
                         </div>
                         <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                          <div className="h-full bg-indigo-500" style={{ width: `${v}%` }} />
+                          {v != null && <div className="h-full bg-indigo-500" style={{ width: `${v}%` }} />}
                         </div>
                       </div>
                     )
