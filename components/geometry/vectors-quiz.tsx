@@ -29,7 +29,7 @@ import {
   ClickableVectorsPlane,
   type VectorsPlaneMark,
 } from '@/components/geometry/clickable-vectors-plane'
-import { scoreGeometryQuestion, computeFinalPercent } from '@/lib/geometry/scoring'
+import { scoreStandardMcq, computeFinalPercent } from '@/lib/geometry/scoring'
 import { CapacityLegend } from '@/components/geometry/capacity-legend'
 import { CapacityBreakdownCard } from '@/components/geometry/capacity-breakdown-card'
 import { GeometryAnalyticsSummary } from '@/components/geometry/geometry-analytics-summary'
@@ -136,7 +136,7 @@ export function VectorsQuizTest() {
     } else if (gradeFI && q.fillIn) {
       score = scoreVectorsFillIn(freeText, q.fillIn.fields)
     } else if (!isAutoEval) {
-      score = scoreGeometryQuestion({
+      score = scoreStandardMcq({
         options: q.options,
         selected: selectedList,
         correctAnswer: q.correctAnswer,

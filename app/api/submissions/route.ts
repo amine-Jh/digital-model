@@ -17,6 +17,7 @@ import {
 import { mockTestQuestions, mockTests } from '@/lib/mock-data'
 import type { Question } from '@/lib/mock-data'
 import type { Json } from '@/lib/types/database'
+import { isExternalTest } from '@/lib/assessment/administration'
 import {
   GEOMETRY_COGNITION_DOMAIN,
   buildGeometryCapacityBreakdown,
@@ -118,6 +119,12 @@ export async function POST(request: Request) {
 
     if (!testId) {
       return NextResponse.json({ error: 'testId required' }, { status: 400 })
+    }
+    if (isExternalTest(testId)) {
+      return NextResponse.json(
+        { error: 'Ce test est externe. Aucun score ne peut être enregistré depuis l’application.' },
+        { status: 403 },
+      )
     }
 
     const sb = await getSupabaseServer()

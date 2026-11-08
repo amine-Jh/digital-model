@@ -4,6 +4,7 @@
  */
 
 import type { Json } from '@/lib/types/database'
+import { isGeometryModuleTest } from '@/lib/assessment/administration'
 
 export type CompletedSessionTrialInput = {
   question_index: number
@@ -35,6 +36,29 @@ export type SubmitCompletedSessionInput = {
 export type SubmitCompletedSessionResult =
   | { ok: true; sessionId: string }
   | { ok: false; error: string }
+
+function csvCell(value: unknown): string {
+  const text = value == null ? '' : String(value)
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+function downloadGeometrySitting(input: SubmitCompletedSessionInput, sessionId: string) {
+  if (typeof document === 'undefined' || !isGeometryModuleTest(input.testId)) return
+  const lines = [
+    'session_id,test_id,question_id,score,correct,selected',
+    ...input.trials.map((trial) =>
+      [sessionId, input.testId, trial.question_id, trial.score, trial.correct, JSON.stringify(trial.selected)]
+        .map(csvCell)
+        .join(','),
+    ),
+  ]
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${input.testId}-${sessionId}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 function clampPercent(n: number): number {
   if (!Number.isFinite(n)) return 0
@@ -94,6 +118,7 @@ export async function submitCompletedTestSession(
     if (typeof body.sessionId !== 'string') {
       return { ok: false, error: 'Invalid response' }
     }
+    downloadGeometrySitting(input, body.sessionId)
     return { ok: true, sessionId: body.sessionId }
   } catch {
     return { ok: false, error: 'Network error' }

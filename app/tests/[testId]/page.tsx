@@ -61,6 +61,7 @@ import { PRODUIT_SCALAIRE_TEST_ID } from '@/lib/geometry/produit-scalaire'
 import { ProduitScalaireQuiz } from '@/components/geometry/produit-scalaire-quiz'
 import { SPACE_VOLUMES_TEST_ID } from '@/lib/geometry/space-volumes'
 import { SpaceVolumesQuiz } from '@/components/geometry/space-volumes-quiz'
+import { EXTERNAL_STUDENT_NOTICE, isExternalTest } from '@/lib/assessment/administration'
 
 interface TestPageProps {
   params: Promise<{ testId: string }>
@@ -69,6 +70,14 @@ interface TestPageProps {
 export default function TestPage({ params }: TestPageProps) {
   const { testId } = use(params)
   const { catalog } = useTestsCatalog()
+  if (isExternalTest(testId)) {
+    return (
+      <main className="mx-auto max-w-xl p-8">
+        <h1 className="text-xl font-semibold">Test externe</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-600">{EXTERNAL_STUDENT_NOTICE}</p>
+      </main>
+    )
+  }
   const test = getTestForRunner(testId, catalog)
 
   if (testId === BEERY_VMI_TEST_ID) {

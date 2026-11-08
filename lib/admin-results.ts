@@ -48,9 +48,9 @@ export type AdminStudentSummary = {
 export function domainAverageForAdminStudent(
   student: AdminStudentSummary,
   domainId: string,
-): number {
+): number | null {
   const d = platformDomains.find((x) => x.id === domainId)
-  if (!d) return 0
+  if (!d) return null
   let testIds = d.subdomains.flatMap((s) => s.capacities.map((c) => c.testId))
   if (domainId === 'visual-processing') {
     testIds = VP_SUBTESTS.map((s) => s.testId)
@@ -58,13 +58,20 @@ export function domainAverageForAdminStudent(
   const vals = testIds
     .map((tid) => student.testScores[tid])
     .filter((v): v is number => typeof v === 'number' && !Number.isNaN(v) && v >= 0)
-  if (!vals.length) return 0
+  if (!vals.length) return null
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 }
 
 export function avg(nums: number[]): number {
   if (!nums.length) return 0
   return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length)
+}
+
+/** Average of the values that exist. An empty list stays missing, not zero. */
+export function avgDefined(nums: Array<number | null | undefined>): number | null {
+  const vals = nums.filter((n): n is number => typeof n === 'number' && !Number.isNaN(n))
+  if (!vals.length) return null
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 }
 
 export async function fetchAdminResultsData(): Promise<{

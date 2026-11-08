@@ -9,6 +9,7 @@ import {
   normalizeTrialQuestionIndices,
 } from '@/lib/supabase/ensure-test-session-fk'
 import { persistGeometryAnalyticsRows } from '@/lib/server/geometry-analytics-persist'
+import { isExternalTest } from '@/lib/assessment/administration'
 import type { Json } from '@/lib/types/database'
 
 type TrialBody = {
@@ -71,6 +72,12 @@ export async function POST(request: Request) {
     const testId = String(body.testId ?? '')
     if (!testId) {
       return NextResponse.json({ error: 'testId required' }, { status: 400 })
+    }
+    if (isExternalTest(testId)) {
+      return NextResponse.json(
+        { error: 'Ce test est externe. Aucun score ne peut être enregistré depuis l’application.' },
+        { status: 403 },
+      )
     }
 
     const sb = await getSupabaseServer()
