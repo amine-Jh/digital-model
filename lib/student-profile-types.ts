@@ -29,6 +29,7 @@ export interface StudentAcademicProfile {
   /** Derived from the grade level — kept for downstream analytics. */
   academicTrack: AcademicTrack
   academicYear: string
+  className?: string | null
   /** Average for academic year 2025 / 2026 (current). */
   mathAverage2025_2026: number | null
   /** Average for academic year 2024 / 2025 (previous). */

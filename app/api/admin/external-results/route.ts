@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/api/require-admin'
 import { findDuplicateKeys, mapImportRows, parseCsv, type ExternalImportRow } from '@/lib/assessment/csv-external'
+import { isExternalTest } from '@/lib/assessment/administration'
 
 type LooseInsert = {
   from: (table: string) => {
@@ -35,6 +36,14 @@ export async function POST(request: Request) {
     : { data: [] as { id: string }[] }
   const known = new Set((profiles ?? []).map((row) => row.id))
   issues.push(...issuesForUnknownStudents(mapped.parsed, known))
+  for (const row of mapped.parsed) {
+    if (row.testId && !isExternalTest(row.testId)) {
+      issues.push({
+        line: row.line,
+        message: 'Test interne : importation refusée pour ne pas remplacer une passation déjà enregistrée.',
+      })
+    }
+  }
 
   if (mode === 'preview' || issues.length > 0) {
     return NextResponse.json({

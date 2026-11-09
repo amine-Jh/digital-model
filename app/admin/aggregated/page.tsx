@@ -1,236 +1,240 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { platformDomains } from '@/lib/platform-domains'
-import { cn } from '@/lib/utils'
-import {
-  fetchAdminResultsData,
-  domainAverageForAdminStudent,
-  avgDefined,
-  type AdminStudentSummary,
-} from '@/lib/admin-results'
 
-function color(v: number | null) {
-  if (v == null) return 'text-slate-400'
-  if (v >= 75) return 'text-green-600'
-  if (v >= 50) return 'text-amber-600'
-  return 'text-red-500'
+type ScoreCell = { earned: number | null; max: number | null; percent: number | null }
+type Student = {
+  studentId: string
+  firstName: string
+  lastName: string
+  level: string | null
+  className: string | null
+  teacher: string | null
+  school: string | null
+  year: string | null
+  supervisedScore: number | null
+  supervisedMax: number | null
+  previousAverage: number | null
+  cka: Record<string, { global: ScoreCell; capacities: Record<string, ScoreCell>; parts: Record<string, ScoreCell> }>
+  other: Record<string, ScoreCell & { source: string | null }>
+}
+type CkaTest = { id: string; name: string; capacities: { code: string; label: string }[]; parts: { key: string; label: string }[] }
+type OtherTest = { id: string; name: string; domainName: string; mode: string }
+
+function show(cell: ScoreCell | undefined): string {
+  if (!cell || (cell.earned == null && cell.max == null && cell.percent == null)) return ''
+  const ratio = cell.earned != null && cell.max != null ? `${cell.earned}/${cell.max}` : ''
+  const percent = cell.percent != null ? `${Math.round(cell.percent * 10) / 10}%` : ''
+  return [ratio, percent].filter(Boolean).join(' · ')
 }
 
-function pct(v: number | null) {
-  return v == null ? 'Non disponible' : `${v}%`
+function csvCell(value: unknown): string {
+  const text = value == null ? '' : String(value)
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
 
-function PctBar({ v }: { v: number | null }) {
-  return (
-    <div className="h-2 rounded-full bg-slate-100 overflow-hidden w-full">
-      {v != null && (
-        <div
-          className={cn(
-            'h-full',
-            v >= 75 ? 'bg-green-500' : v >= 50 ? 'bg-amber-500' : 'bg-red-400',
-          )}
-          style={{ width: `${Math.min(100, v)}%` }}
-        />
-      )}
-    </div>
-  )
+function download(filename: string, rows: unknown[][]) {
+  const body = rows.map((row) => row.map(csvCell).join(',')).join('\n')
+  const url = URL.createObjectURL(new Blob([`\uFEFF${body}`], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 export default function AggregatedPage() {
-  const [students, setStudents] = useState<AdminStudentSummary[]>([])
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [students, setStudents] = useState<Student[]>([])
+  const [ckaTests, setCkaTests] = useState<CkaTest[]>([])
+  const [otherTests, setOtherTests] = useState<OtherTest[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [level, setLevel] = useState('')
+  const [school, setSchool] = useState('')
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    fetchAdminResultsData()
-      .then(({ students: rows, error }) => {
-        if (cancelled) return
-        if (error) setLoadError(error)
-        else setLoadError(null)
-        setStudents(rows)
+    fetch('/api/admin/aggregated-matrix')
+      .then(async (res) => {
+        const body = await res.json()
+        if (!res.ok) throw new Error(body.error ?? 'Chargement impossible')
+        if (!cancelled) {
+          setStudents(body.students ?? [])
+          setCkaTests(body.ckaTests ?? [])
+          setOtherTests(body.otherTests ?? [])
+        }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
+      .catch((err: Error) => {
+        if (!cancelled) setError(err.message)
       })
     return () => {
       cancelled = true
     }
   }, [])
 
-  const byTeacher = useMemo(() => {
-    const m = new Map<string, AdminStudentSummary[]>()
-    for (const s of students) {
-      const k = s.groupId
-      const arr = m.get(k) ?? []
-      arr.push(s)
-      m.set(k, arr)
+  const levels = useMemo(() => [...new Set(students.map((s) => s.level).filter(Boolean))] as string[], [students])
+  const schools = useMemo(() => [...new Set(students.map((s) => s.school).filter(Boolean))] as string[], [students])
+  const visible = students.filter((student) => {
+    const text = `${student.studentId} ${student.firstName} ${student.lastName}`.toLowerCase()
+    if (query && !text.includes(query.toLowerCase())) return false
+    if (level && student.level !== level) return false
+    if (school && student.school !== school) return false
+    return true
+  })
+
+  function identity(student: Student) {
+    return [
+      student.studentId,
+      student.lastName,
+      student.firstName,
+      student.level ?? '',
+      student.className ?? '',
+      student.teacher ?? '',
+      student.school ?? '',
+      student.year ?? '',
+      student.supervisedScore ?? '',
+      student.supervisedMax ?? '',
+      student.previousAverage ?? '',
+    ]
+  }
+
+  function exportCka() {
+    const headers = ['Student_ID', 'Nom', 'Prénom', 'Niveau', 'Classe', 'Enseignant', 'Établissement', 'Année', 'Devoir', 'Devoir max', 'Moyenne S2']
+    for (const test of ckaTests) {
+      headers.push(`${test.name} obtenu`, `${test.name} max`, `${test.name} %`)
+      for (const capacity of test.capacities) headers.push(`${test.name} ${capacity.code} ${capacity.label}`)
+      for (const part of test.parts) headers.push(`${test.name} ${part.label}`)
     }
-    return [...m.entries()].map(([groupId, group]) => {
-      const domainAvgs = platformDomains.map((d) =>
-        avgDefined(group.map((st) => domainAverageForAdminStudent(st, d.id))),
-      )
-      return {
-        groupId,
-        name: group[0]?.teacherName ?? 'Sans enseignant référent',
-        studentCount: group.length,
-        domains: platformDomains.map((d, i) => ({
-          id: d.id,
-          name: d.name,
-          avg: domainAvgs[i] ?? null,
-        })),
-        overall: avgDefined(domainAvgs),
+    const rows = visible.map((student) => {
+      const line: unknown[] = identity(student)
+      for (const test of ckaTests) {
+        const score = student.cka[test.id]
+        line.push(score?.global.earned ?? '', score?.global.max ?? '', score?.global.percent ?? '')
+        for (const capacity of test.capacities) line.push(show(score?.capacities[capacity.code]))
+        for (const part of test.parts) line.push(show(score?.parts[part.key]))
       }
+      return line
     })
-  }, [students])
+    download('resultats-cka.csv', [headers, ...rows])
+  }
 
-  const byFiliere = useMemo(() => {
-    const filieres = [...new Set(students.map((s) => s.filiere))]
-    return filieres.map((f) => ({
-      filiere: f,
-      avg: avgDefined(
-        students
-          .filter((s) => s.filiere === f)
-          .flatMap((s) => platformDomains.map((d) => domainAverageForAdminStudent(s, d.id))),
-      ),
-    }))
-  }, [students])
-
-  const byLevel = useMemo(() => {
-    const levels = [...new Set(students.map((s) => s.level))]
-    return levels.map((lv) => ({
-      level: lv,
-      avg: avgDefined(
-        students
-          .filter((s) => s.level === lv)
-          .flatMap((s) => platformDomains.map((d) => domainAverageForAdminStudent(s, d.id))),
-      ),
-    }))
-  }, [students])
-
-  const byInst = useMemo(() => {
-    const insts = [...new Set(students.map((s) => s.institutionId))]
-    return insts.map((name) => ({
-      name,
-      avg: avgDefined(
-        students
-          .filter((s) => s.institutionId === name)
-          .flatMap((s) => platformDomains.map((d) => domainAverageForAdminStudent(s, d.id))),
-      ),
-    }))
-  }, [students])
-
-  if (loading) {
-    return <p className="text-sm text-slate-500">Chargement…</p>
+  function exportOther() {
+    const headers = ['Student_ID', 'Nom', 'Prénom', 'Niveau', 'Classe', 'Enseignant', 'Établissement', 'Année', 'Devoir', 'Devoir max', 'Moyenne S2', ...otherTests.map((test) => `${test.name} (${test.mode})`)]
+    const rows = visible.map((student) => [...identity(student), ...otherTests.map((test) => show(student.other[test.id]))])
+    download('resultats-autres-domaines.csv', [headers, ...rows])
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Résultats agrégés</h1>
-        <p className="text-slate-500 mt-1">
-          Moyennes calculées depuis `test_sessions` (dernière session par test), groupées par
-          enseignant référent (`student_profiles.teacher_id`).
+        <p className="mt-1 text-sm text-slate-500">
+          Deux tableaux distincts. Une cellule vide signifie qu&apos;il n&apos;y a pas de résultat, pas un zéro.
         </p>
       </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <input className="rounded border px-3 py-1.5 text-sm" placeholder="Student_ID, nom ou prénom" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <select className="rounded border px-2 py-1.5 text-sm" value={level} onChange={(e) => setLevel(e.target.value)}>
+          <option value="">Tous les niveaux</option>
+          {levels.map((item) => <option key={item}>{item}</option>)}
+        </select>
+        <select className="rounded border px-2 py-1.5 text-sm" value={school} onChange={(e) => setSchool(e.target.value)}>
+          <option value="">Tous les établissements</option>
+          {schools.map((item) => <option key={item}>{item}</option>)}
+        </select>
+      </div>
 
-      {loadError && (
-        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {loadError}
-        </p>
-      )}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">1. Cognition et apprentissage de la géométrie</h2>
+          <button type="button" className="text-sm text-indigo-700 underline" onClick={exportCka}>Exporter Excel (CSV)</button>
+        </div>
+        <div className="max-h-[70vh] overflow-auto rounded border">
+          <table className="min-w-max border-collapse text-xs">
+            <thead className="sticky top-0 bg-white">
+              <tr className="text-left text-slate-500">
+                {['Student_ID', 'Nom', 'Prénom', 'Niveau', 'Classe', 'Enseignant', 'Établissement', 'Année'].map((label) => (
+                  <th key={label} className="sticky left-0 bg-white px-2 py-2">{label}</th>
+                ))}
+                {ckaTests.flatMap((test) => [
+                  <th key={`${test.id}-g`} className="px-2 py-2">{test.name} — global</th>,
+                  ...test.capacities.map((capacity) => (
+                    <th key={`${test.id}-${capacity.code}`} className="px-2 py-2" title={capacity.label}>{test.name} — {capacity.code}</th>
+                  )),
+                  ...test.parts.map((part) => (
+                    <th key={`${test.id}-p${part.key}`} className="px-2 py-2">{test.name} — {part.label}</th>
+                  )),
+                ])}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((student) => (
+                <tr key={student.studentId} className="border-t">
+                  <td className="px-2 py-1 font-mono">{student.studentId}</td>
+                  <td className="px-2 py-1">{student.lastName}</td>
+                  <td className="px-2 py-1">{student.firstName}</td>
+                  <td className="px-2 py-1">{student.level ?? ''}</td>
+                  <td className="px-2 py-1">{student.className ?? ''}</td>
+                  <td className="px-2 py-1">{student.teacher ?? ''}</td>
+                  <td className="px-2 py-1">{student.school ?? ''}</td>
+                  <td className="px-2 py-1">{student.year ?? ''}</td>
+                  {ckaTests.flatMap((test) => {
+                    const score = student.cka[test.id]
+                    return [
+                      <td key={`${student.studentId}-${test.id}-g`} className="px-2 py-1">{show(score?.global)}</td>,
+                      ...test.capacities.map((capacity) => (
+                        <td key={`${student.studentId}-${test.id}-${capacity.code}`} className="px-2 py-1">{show(score?.capacities[capacity.code])}</td>
+                      )),
+                      ...test.parts.map((part) => (
+                        <td key={`${student.studentId}-${test.id}-p${part.key}`} className="px-2 py-1">{show(score?.parts[part.key])}</td>
+                      )),
+                    ]
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Par enseignant référent</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {byTeacher.length === 0 ? (
-            <p className="text-sm text-slate-500">Aucune donnée agrégée (pas d&apos;élèves ou pas de sessions).</p>
-          ) : (
-            byTeacher.map((t) => (
-              <div key={t.groupId} className="space-y-2 pb-4 border-b border-slate-100 last:border-0">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold">{t.name}</p>
-                    <p className="text-xs text-slate-500">{t.studentCount} élève(s)</p>
-                  </div>
-                  <span className={cn('text-xl font-bold tabular-nums', color(t.overall))}>
-                    {pct(t.overall)}
-                  </span>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                  {t.domains.map((d) => (
-                    <div key={d.id}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="truncate pr-2">{d.name}</span>
-                        <span className={cn('font-bold tabular-nums', color(d.avg))}>{pct(d.avg)}</span>
-                      </div>
-                      <PctBar v={d.avg} />
-                    </div>
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">2. Autres domaines</h2>
+          <button type="button" className="text-sm text-indigo-700 underline" onClick={exportOther}>Exporter Excel (CSV)</button>
+        </div>
+        <div className="max-h-[70vh] overflow-auto rounded border">
+          <table className="min-w-max border-collapse text-xs">
+            <thead className="sticky top-0 bg-white">
+              <tr className="text-left text-slate-500">
+                {['Student_ID', 'Nom', 'Prénom', 'Niveau', 'Classe', 'Enseignant', 'Établissement', 'Année'].map((label) => (
+                  <th key={label} className="px-2 py-2">{label}</th>
+                ))}
+                {otherTests.map((test) => (
+                  <th key={test.id} className="px-2 py-2">{test.name}<div className="font-normal text-slate-400">{test.mode === 'external' ? 'Externe' : 'Interne'}</div></th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((student) => (
+                <tr key={student.studentId} className="border-t">
+                  <td className="px-2 py-1 font-mono">{student.studentId}</td>
+                  <td className="px-2 py-1">{student.lastName}</td>
+                  <td className="px-2 py-1">{student.firstName}</td>
+                  <td className="px-2 py-1">{student.level ?? ''}</td>
+                  <td className="px-2 py-1">{student.className ?? ''}</td>
+                  <td className="px-2 py-1">{student.teacher ?? ''}</td>
+                  <td className="px-2 py-1">{student.school ?? ''}</td>
+                  <td className="px-2 py-1">{student.year ?? ''}</td>
+                  {otherTests.map((test) => (
+                    <td key={test.id} className="px-2 py-1">{show(student.other[test.id])}</td>
                   ))}
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Par filière</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {byFiliere.map((f) => (
-              <div key={f.filiere}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="truncate pr-2">{f.filiere}</span>
-                  <span className={cn('font-bold tabular-nums', color(f.avg))}>{pct(f.avg)}</span>
-                </div>
-                <PctBar v={f.avg} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Par niveau scolaire</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {byLevel.map((x) => (
-              <div key={x.level}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="truncate pr-2">{x.level}</span>
-                  <span className={cn('font-bold tabular-nums', color(x.avg))}>{pct(x.avg)}</span>
-                </div>
-                <PctBar v={x.avg} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Par établissement</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {byInst.map((x) => (
-              <div key={x.name}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="truncate pr-2">{x.name}</span>
-                  <span className={cn('font-bold tabular-nums', color(x.avg))}>{pct(x.avg)}</span>
-                </div>
-                <PctBar v={x.avg} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   )
 }

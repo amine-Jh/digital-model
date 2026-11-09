@@ -10,7 +10,7 @@
  * Backed by public.student_profiles. NO local student-profiles.json.
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseServer } from '@/lib/supabase/server'
+import { getSupabaseServer, tryGetSupabaseAdmin } from '@/lib/supabase/server'
 import type { StudentAcademicProfile } from '@/lib/student-profile-types'
 import type { Database } from '@/lib/types/database'
 
@@ -103,7 +103,8 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Établissement introuvable ou inactif.' }, { status: 400 })
     }
 
-    const { data: teacherRow, error: teacherErr } = await sb
+    const reader = tryGetSupabaseAdmin() ?? sb
+    const { data: teacherRow, error: teacherErr } = await reader
       .from('profiles')
       .select('id, full_name, email, school_id')
       .eq('id', teacherId)
@@ -150,6 +151,19 @@ export async function PUT(request: Request) {
     if (error) {
       console.error('[student-profile PUT]', error.message)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const className = typeof body.className === 'string' ? body.className.trim() : ''
+    if (className) {
+      const loose = (tryGetSupabaseAdmin() ?? sb) as unknown as {
+        from: (table: string) => {
+          update: (value: { class_name: string }) => {
+            eq: (col: string, value: string) => Promise<{ error: { message: string } | null }>
+          }
+        }
+      }
+      const saved = await loose.from('student_profiles').update({ class_name: className }).eq('user_id', user.id)
+      if (saved.error) console.error('[student-profile class]', saved.error.message)
     }
 
     return NextResponse.json({ ok: true })
