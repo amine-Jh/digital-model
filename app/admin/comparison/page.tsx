@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, LineChart, Line,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend,
 } from 'recharts'
 import { avg, buildAdminStudents, domainAverageForStudent, mockTeacherGroups } from '@/lib/admin-mock'
+import { avgDefined, domainAverageForAdminStudent, fetchAdminResultsData, type AdminStudentSummary } from '@/lib/admin-results'
 import { platformDomains } from '@/lib/platform-domains'
 
 const shortNames: Record<string, string> = {
@@ -39,13 +40,35 @@ export default function ComparisonPage() {
     }
   })
 
-  const filiereTrend = Array.from(new Set(students.map((s) => s.filiere))).map((f) => {
-    const row: Record<string, number | string> = { filiere: f }
-    platformDomains.forEach((d) => {
-      row[shortNames[d.id] ?? d.name] = avg(students.filter((s) => s.filiere === f).map((s) => domainAverageForStudent(s, d.id)))
+  const [realStudents, setRealStudents] = useState<AdminStudentSummary[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetchAdminResultsData().then(({ students: rows }) => {
+      if (!cancelled) setRealStudents(rows)
     })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const levels = useMemo(
+    () => [...new Set(realStudents.map((student) => student.level).filter((level) => level && level !== '—'))],
+    [realStudents],
+  )
+  const levelRadar = platformDomains.map((domain) => {
+    const row: Record<string, string | number> = { domain: shortNames[domain.id] ?? domain.name }
+    for (const schoolLevel of levels) {
+      const values = realStudents
+        .filter((student) => student.level === schoolLevel)
+        .map((student) => domainAverageForAdminStudent(student, domain.id))
+      const mean = avgDefined(values)
+      if (mean != null) row[schoolLevel] = mean
+    }
     return row
   })
+  const levelCounts = levels.map((schoolLevel) => ({
+    level: schoolLevel,
+    n: realStudents.filter((student) => student.level === schoolLevel && platformDomains.some((domain) => domainAverageForAdminStudent(student, domain.id) != null)).length,
+  }))
 
   const A = mockTeacherGroups.find((g) => g.id === groupA)?.name ?? 'A'
   const B = mockTeacherGroups.find((g) => g.id === groupB)?.name ?? 'B'
@@ -101,20 +124,37 @@ export default function ComparisonPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">Tendance par filière</CardTitle></CardHeader>
-        <CardContent style={{ height: 320 }}>
-          <ResponsiveContainer>
-            <LineChart data={filiereTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="filiere" fontSize={11} />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Legend />
-              {Object.values(shortNames).map((k, i) => (
-                <Line key={k} type="monotone" dataKey={k} stroke={`hsl(${i * 45}, 70%, 50%)`} strokeWidth={2} />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+        <CardHeader>
+          <CardTitle className="text-sm">Comparaison des performances par niveau scolaire — Graphique radar</CardTitle>
+          <p className="text-xs text-slate-500">
+            Moyennes en pourcentage. Une absence de score n&apos;entre pas dans la moyenne.
+            {levelCounts.map((item) => ` ${item.level}: N=${item.n}.`)}
+          </p>
+        </CardHeader>
+        <CardContent style={{ height: 380 }}>
+          {levels.length === 0 ? (
+            <p className="text-sm text-slate-500">Aucun niveau scolaire n&apos;est encore associé à des élèves.</p>
+          ) : (
+            <ResponsiveContainer>
+              <RadarChart data={levelRadar}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="domain" fontSize={11} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                {levels.map((schoolLevel, index) => (
+                  <Radar
+                    key={schoolLevel}
+                    name={schoolLevel}
+                    dataKey={schoolLevel}
+                    stroke={`hsl(${index * 70}, 70%, 42%)`}
+                    fill={`hsl(${index * 70}, 70%, 42%)`}
+                    fillOpacity={0.2}
+                  />
+                ))}
+                <Legend />
+                <Tooltip />
+              </RadarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>

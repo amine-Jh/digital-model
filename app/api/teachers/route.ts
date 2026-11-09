@@ -5,7 +5,7 @@
  * When `schoolId` is set, only teachers assigned to that school are returned.
  */
 import { NextResponse } from 'next/server'
-import { getSupabaseServer } from '@/lib/supabase/server'
+import { getSupabaseServer, tryGetSupabaseAdmin } from '@/lib/supabase/server'
 import type { TeacherDirectoryEntry } from '@/lib/teacher-directory'
 
 export async function GET(request: Request) {
@@ -21,7 +21,10 @@ export async function GET(request: Request) {
   const schoolId = searchParams.get('schoolId')?.trim() || null
 
   try {
-    let q = sb.from('profiles').select('id, email, full_name, school_id').eq('role', 'teacher')
+    // Students cannot read other profiles under RLS. The directory is limited
+    // to teacher id, name, email and school, and only after sign-in.
+    const reader = tryGetSupabaseAdmin() ?? sb
+    let q = reader.from('profiles').select('id, email, full_name, school_id').eq('role', 'teacher')
     if (schoolId) {
       q = q.eq('school_id', schoolId)
     }

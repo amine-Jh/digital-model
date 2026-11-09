@@ -131,6 +131,15 @@ const PART_TITLES: Record<string, Record<CanonicalPart, string>> = {
   },
 }
 
+/** Parts that this lesson actually configures. Empty titles are omitted. */
+export function configuredCanonicalParts(testId: string): { part: CanonicalPart; label: string }[] {
+  const titles = PART_TITLES[testId]
+  if (!titles) return []
+  return ([1, 2, 3] as CanonicalPart[])
+    .filter((part) => (titles[part] ?? '').trim() !== '')
+    .map((part) => ({ part, label: titles[part] }))
+}
+
 export function canonicalPartLabel(testId: string, part: CanonicalPart): string {
   const row = PART_TITLES[testId]?.[part]
   if (row && row.trim() !== '') return row

@@ -48,6 +48,7 @@ export default function ProfileSetupPage() {
   const [teachersLoading, setTeachersLoading] = useState(false)
   const [teachersError, setTeachersError] = useState<string | null>(null)
   const [gradeLevel, setGradeLevel] = useState<MoroccanGradeLevel>(SCHOLAR_LEVELS[0])
+  const [className, setClassName] = useState('')
   const [mathAverage2025_2026, setMathAverage2025_2026] = useState('')
   const [mathAverage2024_2025, setMathAverage2024_2025] = useState('')
 
@@ -138,6 +139,7 @@ export default function ProfileSetupPage() {
           schoolId,
           teacherId,
           gradeLevel,
+          className,
           academicTrack: resolveDefaultTrack(gradeLevel),
           academicYear,
           mathAverage2025_2026:
@@ -192,54 +194,6 @@ export default function ProfileSetupPage() {
 
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="font-mono text-xs">
-                  1
-                </Badge>
-                <h3 className="text-sm font-semibold text-foreground">Identité</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nom complet</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="age">Âge</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    min={5}
-                    max={100}
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 max-w-xs">
-                <Label>Genre</Label>
-                <Select
-                  value={gender || undefined}
-                  onValueChange={(v) => setGender(v as 'Male' | 'Female')}
-                  required
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choisir" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Homme</SelectItem>
-                    <SelectItem value="Female">Femme</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div
               className={cn(
                 'rounded-2xl border border-border/80 bg-muted/25 p-5 space-y-5',
@@ -248,9 +202,9 @@ export default function ProfileSetupPage() {
             >
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="font-mono text-xs">
-                  2
+                  1
                 </Badge>
-                <h3 className="text-sm font-semibold text-foreground">Établissement & enseignant</h3>
+                <h3 className="text-sm font-semibold text-foreground">Établissement et enseignant</h3>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
@@ -306,7 +260,7 @@ export default function ProfileSetupPage() {
                     <p className="text-sm text-destructive">{teachersError}</p>
                   ) : teachers.length === 0 ? (
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      Aucun enseignant rattaché à cet établissement pour le moment.
+                      Aucun enseignant n&apos;est associé à cet établissement. Un super-administrateur doit d&apos;abord enregistrer l&apos;enseignant.
                     </p>
                   ) : (
                     <Select value={teacherId || undefined} onValueChange={setTeacherId}>
@@ -333,9 +287,9 @@ export default function ProfileSetupPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="font-mono text-xs">
-                  3
+                  2
                 </Badge>
-                <h3 className="text-sm font-semibold text-foreground">Parcours & résultats</h3>
+                <h3 className="text-sm font-semibold text-foreground">Niveau et classe</h3>
               </div>
               <div className="space-y-2">
                 <Label>Niveau scolaire</Label>
@@ -351,6 +305,15 @@ export default function ProfileSetupPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="className">Classe</Label>
+                <Input
+                  id="className"
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  placeholder="Ex. TC-1, 1BAC SM-A"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -376,6 +339,37 @@ export default function ProfileSetupPage() {
                     onChange={(e) => setMathAverage2024_2025(e.target.value)}
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="font-mono text-xs">
+                  3
+                </Badge>
+                <h3 className="text-sm font-semibold text-foreground">Identité</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Nom complet</Label>
+                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="age">Âge</Label>
+                  <Input id="age" type="number" min={5} max={100} value={age} onChange={(e) => setAge(e.target.value)} required />
+                </div>
+              </div>
+              <div className="space-y-2 max-w-xs">
+                <Label>Genre</Label>
+                <Select value={gender || undefined} onValueChange={(v) => setGender(v as 'Male' | 'Female')} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choisir" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Homme</SelectItem>
+                    <SelectItem value="Female">Femme</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
